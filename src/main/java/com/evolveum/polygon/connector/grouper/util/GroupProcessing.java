@@ -103,7 +103,8 @@ public class GroupProcessing extends ObjectProcessing {
                 // create the connector object
                 //TODO
                 LOG.ok("TODO scanning result set");
-                LOG.ok("THE RESULT: " + result);
+                LOG.ok(result.toString());
+                handleSqlObject(result, handler, operationOptions);
             }
 
         } catch (SQLException e) {
@@ -116,19 +117,23 @@ public class GroupProcessing extends ObjectProcessing {
     @Override
     protected boolean handleSqlObject(ResultSet resultSet, ResultsHandler handler, OperationOptions oo)
             throws SQLException {
+
+        LOG.info("Evaluation of SQL objects present in result set.");
         ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
+        builder.setObjectClass(ObjectClass.GROUP);
 
         ResultSetMetaData meta = resultSet.getMetaData();
 
         int count = meta.getColumnCount();
-
+        LOG.ok("Number of columns returned from result set object");
         // TODO Based on options the handling might be paginated
         // options
 
         for (int i = 1; i <= count; i++) {
             String name = meta.getColumnName(i);
+            LOG.ok("Evaluation of column with name {0}", name);
 
-            if (name != ATTR_ID_IDX) {
+            if (!name.equals(ATTR_ID_IDX)) {
 
 
                 if (columns.containsKey(name)) {
@@ -136,11 +141,13 @@ public class GroupProcessing extends ObjectProcessing {
 
                     if (type.equals(Long.class)) {
 
+                        LOG.ok("Addition of Long type attribute for attribute from column with name {0}", name);
                         builder.addAttribute(name, resultSet.getLong(i));
                     }
 
                     if (type.equals(String.class)) {
 
+                        LOG.ok("Addition of String type attribute for attribute from column with name {0}", name);
                         builder.addAttribute(name, resultSet.getString(i));
                     }
 
@@ -150,13 +157,18 @@ public class GroupProcessing extends ObjectProcessing {
                             "The column name: {0}", name);
                 }
             } else {
-                builder.setName(Long.toString(resultSet.getLong(i)));
-                builder.setUid(Long.toString(resultSet.getLong(i)));
+                String nameVal = Long.toString(resultSet.getLong(i));
+                LOG.ok("Addition of UID and Name attribute {0}, the value {1}", name, nameVal);
+
+
+                builder.setName(nameVal);
+                builder.setUid(new Uid(nameVal));
 
             }
 
         }
 
+        LOG.ok("Handling resulting object");
         return handler.handle(builder.build());
     }
 }
