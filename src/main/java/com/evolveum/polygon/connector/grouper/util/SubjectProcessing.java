@@ -73,7 +73,8 @@ public class SubjectProcessing extends ObjectProcessing {
         LOG.ok("Processing trough executeQuery methods for the object class {0}",
                 SUBJECT_NAME);
 
-        QueryBuilder queryBuilder = new QueryBuilder(SUBJECT_NAME, filter, columns, TABLE_SU_NAME, operationOptions);
+        QueryBuilder queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, columns, TABLE_SU_NAME,
+                ATTR_ID_IDX, operationOptions);
         String query = queryBuilder.build();
         ResultSet result = null;
         LOG.info("Query about to be executed: {0}", query);

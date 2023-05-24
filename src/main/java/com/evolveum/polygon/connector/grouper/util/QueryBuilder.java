@@ -18,6 +18,7 @@ package com.evolveum.polygon.connector.grouper.util;
 
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
+import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
@@ -29,22 +30,23 @@ public class QueryBuilder {
     private static final Log LOG = Log.getLog(QueryBuilder.class);
     private final String tableName;
     private static final String _WHERE = "WHERE";
-    private String translatedFilter;
+    private ResourceQuery translatedFilter;
     private Map<String, Class> columns;
 
-    public QueryBuilder(String objectClassName, Filter filter, Map columns, String table,
+    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Class> columns, String table, String uniqueName,
                         OperationOptions operationOptions) {
 
         if (filter == null) {
 
             LOG.ok("Empty query parameter, returning full list of objects of the object class: {0}"
-                    , objectClassName);
+                    , objectClass);
             this.translatedFilter = null;
         } else {
 
             if (filter != null) {
 
-                this.translatedFilter = filter.accept(new FilterHandler(), new String());
+                this.translatedFilter = filter.accept(new FilterHandler(),
+                        new ResourceQuery(objectClass, uniqueName, columns));
             }
         }
 
@@ -58,7 +60,7 @@ public class QueryBuilder {
 
         if(translatedFilter!=null){
 
-        
+            statementString = statementString + " " + _WHERE + " " + translatedFilter.getQuery();
         }
 
         return statementString;

@@ -82,12 +82,13 @@ public class GroupProcessing extends ObjectProcessing {
 
         schemaBuilder.defineObjectClass(subjectObjClassBuilder.build());
     }
+
     public void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
             , Connection connection) {
         LOG.ok("Processing trough executeQuery methods for the object class {0}",
                 ObjectClass.GROUP_NAME);
 
-        QueryBuilder queryBuilder = new QueryBuilder(ObjectClass.GROUP_NAME, filter, columns, TABLE_GR_NAME,
+        QueryBuilder queryBuilder = new QueryBuilder(ObjectClass.GROUP, filter, columns, TABLE_GR_NAME, ATTR_ID_IDX,
                 operationOptions);
         String query = queryBuilder.build();
         ResultSet result = null;
@@ -102,7 +103,7 @@ public class GroupProcessing extends ObjectProcessing {
                 // create the connector object
                 //TODO
                 LOG.ok("TODO scanning result set");
-                LOG.ok("THE RESULT: "+result);
+                LOG.ok("THE RESULT: " + result);
             }
 
         } catch (SQLException e) {

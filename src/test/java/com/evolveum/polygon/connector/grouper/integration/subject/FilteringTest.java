@@ -58,7 +58,7 @@ public class FilteringTest extends CommonTestClass {
         TestSearchResultsHandler handler = getResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
-                new Uid("82")));
+                "82"));
 
         grouperConnector.executeQuery(objectClassSubject, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
