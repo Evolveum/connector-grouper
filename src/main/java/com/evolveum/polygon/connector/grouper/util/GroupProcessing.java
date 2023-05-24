@@ -49,7 +49,7 @@ public class GroupProcessing extends ObjectProcessing {
 
 
         ObjectClassInfoBuilder subjectObjClassBuilder = new ObjectClassInfoBuilder();
-        subjectObjClassBuilder.setType(SUBJECT_NAME);
+        subjectObjClassBuilder.setType(ObjectClass.GROUP_NAME);
 
         //subjectObjClassBuilder.addAttributeInfo(OperationalAttributeInfos.ENABLE);
         //subjectObjClassBuilder.addAttributeInfo(OperationalAttributeInfos.PASSWORD);

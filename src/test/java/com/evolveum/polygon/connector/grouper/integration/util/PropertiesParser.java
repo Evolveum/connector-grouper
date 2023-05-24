@@ -32,7 +32,7 @@ public class PropertiesParser {
     private static final String PROPERTIES_PATH = "/testProperties/propertiesForTest.properties";
     private static final String _HOST = "host";
     private static final String _PORT = "port";
-    private static final String _LOGIN = "loginName";
+    private static final String _LOGIN = "userName";
     private static final String _PASSWORD = "password";
     private static final String _DATABASE = "databaseName";
     private static final String _VALID_TIMEOUT = "connectionValidTimeout";

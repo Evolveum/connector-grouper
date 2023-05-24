@@ -22,7 +22,6 @@ import org.identityconnectors.framework.spi.AbstractConfiguration;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.spi.ConfigurationProperty;
 import org.identityconnectors.framework.spi.StatefulConfiguration;
-import org.identityconnectors.framework.spi.operations.DiscoverConfigurationOp;
 
 import java.util.HashSet;
 
@@ -33,7 +32,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private Integer connectionValidTimeout = 10;
     private String databaseName;
     private GuardedString password;
-    private String loginName;
+    private String userName;
     private String port;
     private String host;
 
@@ -65,7 +64,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
             parameters.add("password");
         }
 
-        if (loginName != null && !loginName.isEmpty()) {
+        if (userName != null && !userName.isEmpty()) {
         } else {
             parameters.add("loginName");
         }
@@ -114,15 +113,15 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
 
 
     @ConfigurationProperty(order = 4,
-            displayMessageKey = "loginName.display",
-            helpMessageKey = "loginName.help",
+            displayMessageKey = "userName.display",
+            helpMessageKey = "userName.help",
             required = true)
     public String getUserName() {
-        return this.loginName;
+        return this.userName;
     }
 
-    public void setLoginName(String value) {
-        this.loginName = value;
+    public void setUserName(String value) {
+        this.userName = value;
     }
 
     @ConfigurationProperty(order = 5, confidential = true,
@@ -168,7 +167,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         connectionValidTimeout = null;
         databaseName = null;
         password.dispose();
-        loginName = null;
+        userName = null;
         port = null;
         host = null;
     }

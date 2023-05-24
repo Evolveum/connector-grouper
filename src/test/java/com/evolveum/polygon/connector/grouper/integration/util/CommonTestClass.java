@@ -44,7 +44,7 @@ public class CommonTestClass implements ObjectConstants {
         grouperConfiguration.setDatabaseName(parser.getDatabase());
         grouperConfiguration.setPort(parser.getPort());
         grouperConfiguration.setPassword(parser.getPassword());
-        grouperConfiguration.setLoginName(parser.getLogin());
+        grouperConfiguration.setUserName(parser.getLogin());
         grouperConfiguration.setConnectionValidTimeout(parser.getValidTimeout());
 
         return grouperConfiguration;
