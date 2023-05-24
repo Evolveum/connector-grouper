@@ -1,0 +1,201 @@
+<resource xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:org="http://midpoint.evolveum.com/xml/ns/public/common/org-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          oid="fb0bbf07-e33f-4ddd-85a1-16a7edc237f2">
+
+    <name>Grouper</name>
+
+    <connectorRef oid="ba038273-2510-4729-82b0-cebbe1a66eb9" relation="org:default" type="c:ConnectorType"/>
+    <connectorConfiguration xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3">
+        <icfc:configurationProperties xmlns:gen617="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector.connector-grouper/com.evolveum.polygon.connector.grouper.GrouperConnector">
+            <gen617:host>127.0.0.1</gen617:host>
+            <gen617:port>5432</gen617:port>
+            <gen617:userName>midpoint</gen617:userName>
+            <gen617:password>
+                <t:clearValue>5ecr3t</t:clearValue>
+            </gen617:password>
+            <gen617:databaseName>grouper</gen617:databaseName>
+            <gen617:connectionValidTimeout>15</gen617:connectionValidTimeout>
+        </icfc:configurationProperties>
+        <icfc:resultsHandlerConfiguration>
+            <icfc:enableNormalizingResultsHandler>false</icfc:enableNormalizingResultsHandler>
+            <icfc:enableFilteredResultsHandler>false</icfc:enableFilteredResultsHandler>
+            <icfc:enableAttributesToGetSearchResultsHandler>false</icfc:enableAttributesToGetSearchResultsHandler>
+        </icfc:resultsHandlerConfiguration>
+    </connectorConfiguration>
+
+    <schema>
+        <generationConstraints>
+            <generateObjectClass>ri:GroupObjectClass</generateObjectClass>
+            <generateObjectClass>ri:Custom__SUBJECT__ObjectClass</generateObjectClass>
+        </generationConstraints>
+    </schema>
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>Default Account</displayName>
+            <default>true</default>
+            <objectClass>ri:Custom__SUBJECT__ObjectClass</objectClass>
+
+            <focus>
+                <type>c:UserType</type>
+            </focus>
+
+            <attribute>
+                <ref>icfs:name</ref>
+                <inbound>
+                    <target>
+                        <path>$user/name</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:subject_id</ref>
+                <inbound>
+                    <target>
+                        <path>$user/employeeNumber</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <correlation>
+                <correlators>
+                    <items>
+                        <name>unique_index</name>
+                        <item>
+                            <ref>name</ref>
+                        </item>
+                    </items>
+                </correlators>
+            </correlation>
+
+            <synchronization>
+                <reaction>
+                    <situation>unmatched</situation>
+                    <actions>
+                        <addFocus>
+                            <synchronize>true</synchronize>
+                        </addFocus>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <situation>unlinked</situation>
+                    <actions>
+                        <link>
+                            <synchronize>true</synchronize>
+                        </link>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <situation>linked</situation>
+                    <actions>
+                        <synchronize/>
+                    </actions>
+                </reaction>
+            </synchronization>
+
+        </objectType>
+
+        <objectType>
+            <kind>entitlement</kind>
+            <intent>default</intent>
+            <displayName>Group</displayName>
+            <default>true</default>
+            <objectClass>ri:GroupObjectClass</objectClass>
+
+            <focus>
+                <type>c:RoleType</type>
+            </focus>
+
+            <attribute>
+                <ref>icfs:name</ref>
+                <inbound>
+                    <target>
+                        <path>$focus/name</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:group_name</ref>
+                <inbound>
+                    <target>
+                        <path>$focus/displayName</path>
+                    </target>
+                </inbound>
+            </attribute>
+            <attribute>
+                <ref>ri:description</ref>
+                <inbound>
+                    <target>
+                        <path>$focus/description</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <correlation>
+                <correlators>
+                    <items>
+                        <name>unique_index</name>
+                        <item>
+                            <ref>name</ref>
+                        </item>
+                    </items>
+                </correlators>
+            </correlation>
+
+            <synchronization>
+                <reaction>
+                    <situation>unmatched</situation>
+                    <actions>
+
+                        <addFocus>
+                            <synchronize>true</synchronize>
+                        </addFocus>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <situation>unlinked</situation>
+                    <actions>
+                        <link>
+                            <synchronize>true</synchronize>
+                        </link>
+                    </actions>
+                </reaction>
+                <reaction>
+                    <situation>linked</situation>
+                    <actions>
+                        <synchronize/>
+                    </actions>
+                </reaction>
+            </synchronization>
+        </objectType>
+
+    </schemaHandling>
+
+    <capabilities>
+        <cachingMetadata>
+            <retrievalTimestamp>2023-05-24T13:23:53.145+02:00</retrievalTimestamp>
+            <serialNumber>d991389de17be20e-55b20a5934dbcc31</serialNumber>
+        </cachingMetadata>
+        <native xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3">
+            <cap:schema/>
+            <cap:read>
+                <cap:returnDefaultAttributesOption>false</cap:returnDefaultAttributesOption>
+            </cap:read>
+            <cap:testConnection/>
+            <cap:script>
+                <cap:host id="2">
+                    <cap:type>connector</cap:type>
+                </cap:host>
+            </cap:script>
+        </native>
+    </capabilities>
+</resource>
