@@ -21,10 +21,8 @@ import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
 import java.math.BigInteger;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.HashMap;
 import java.util.Map;
 
 public class GroupProcessing extends ObjectProcessing {
@@ -35,14 +33,13 @@ public class GroupProcessing extends ObjectProcessing {
     private static final String ATTR_DESCRIPTION = "description";
     private static final String ATTR_ID_IDX = "id_index";
     private static final String TABLE_GR_NAME = "gr_mp_groups";
-    protected static final Map<String, Class> columns = Map.ofEntries(
-            Map.entry(ATTR_NAME, String.class),
-            Map.entry(ATTR_DISPLAY_NAME, String.class),
-            Map.entry(ATTR_DESCRIPTION, String.class),
-            Map.entry(ATTR_ID_IDX, BigInteger.class)
-    );
-    public GroupProcessing() {
+    protected Map<String, Class> columns = new HashMap<>();
 
+    public GroupProcessing() {
+        columns.put(ATTR_NAME, String.class);
+        columns.put(ATTR_DISPLAY_NAME, String.class);
+        columns.put(ATTR_DESCRIPTION, String.class);
+        columns.put(ATTR_ID_IDX, Long.class);
         this.columns.putAll(objectColumns);
 
     }
@@ -116,9 +113,49 @@ public class GroupProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected boolean handleSqlObject(ResultSet resultSet, ResultsHandler handler) throws SQLException {
+    protected boolean handleSqlObject(ResultSet resultSet, ResultsHandler handler, OperationOptions oo)
+            throws SQLException {
+        ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
 
-        //TODO
-        return false;
+        ResultSetMetaData meta = resultSet.getMetaData();
+
+        int count = meta.getColumnCount();
+
+        // TODO Based on options the handling might be paginated
+        // options
+
+        for (int i = 1; i <= count; i++) {
+            String name = meta.getColumnName(i);
+
+            if (name != ATTR_ID_IDX) {
+
+
+                if (columns.containsKey(name)) {
+                    Class type = columns.get(name);
+
+                    if (type.equals(Long.class)) {
+
+                        builder.addAttribute(name, resultSet.getLong(i));
+                    }
+
+                    if (type.equals(String.class)) {
+
+                        builder.addAttribute(name, resultSet.getString(i));
+                    }
+
+                } else {
+
+                    LOG.info("SQL object handling discovered a column which is not present in the original schema set. " +
+                            "The column name: {0}", name);
+                }
+            } else {
+                builder.setName(Long.toString(resultSet.getLong(i)));
+                builder.setUid(Long.toString(resultSet.getLong(i)));
+
+            }
+
+        }
+
+        return handler.handle(builder.build());
     }
 }

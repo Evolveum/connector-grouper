@@ -33,9 +33,9 @@ public abstract class ObjectProcessing {
     // TODO MAP AS ACTIVATION ATTR?
     protected static final String ATTR_DELETED = "deleted";
 
-    protected static final Map<String, Class> objectColumns = Map.ofEntries(
-            Map.entry(ATTR_MODIFIED, BigInteger.class),
-            Map.entry(ATTR_DELETED, char.class)
+    protected Map<String, Class> objectColumns = Map.ofEntries(
+            Map.entry(ATTR_MODIFIED, Long.class),
+            Map.entry(ATTR_DELETED, String.class)
     );
 
 
@@ -44,5 +44,6 @@ public abstract class ObjectProcessing {
     public abstract void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
             , Connection connection);
 
-    protected abstract boolean handleSqlObject(ResultSet resultSet, ResultsHandler handler) throws SQLException;
+    protected abstract boolean handleSqlObject(ResultSet resultSet, ResultsHandler handler, OperationOptions oo)
+            throws SQLException;
 }

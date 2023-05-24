@@ -18,15 +18,16 @@ package com.evolveum.polygon.connector.grouper.integration.subject;
 
 import com.evolveum.polygon.connector.grouper.integration.util.CommonTestClass;
 import com.evolveum.polygon.connector.grouper.integration.util.TestSearchResultsHandler;
-import org.identityconnectors.framework.common.objects.ConnectorObject;
-import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.OperationOptions;
+import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.objects.*;
+import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
+import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 
 public class FilteringTest extends CommonTestClass {
-
+    private static final Log LOG = Log.getLog(FilteringTest.class);
     @Test()
     public void fetchAll() {
 
@@ -37,5 +38,39 @@ public class FilteringTest extends CommonTestClass {
 
         grouperConnector.executeQuery(objectClassSubject, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
+
+
+        // TODO test only
+        for(ConnectorObject result : results){
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj->LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
+    }
+    @Test()
+    public void equalsUID() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME);
+        ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getResultHandler();
+
+        EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
+                new Uid("82")));
+
+        grouperConnector.executeQuery(objectClassSubject, filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+
+        // TODO test only
+        for(ConnectorObject result : results){
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj->LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
     }
 }

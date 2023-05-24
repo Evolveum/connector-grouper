@@ -41,5 +41,17 @@ public class FilteringTest extends CommonTestClass {
 
         grouperConnector.executeQuery(ObjectClass.GROUP, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
+
+
+        // TODO test only
+        for(ConnectorObject result : results){
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj->LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
     }
+
+
 }

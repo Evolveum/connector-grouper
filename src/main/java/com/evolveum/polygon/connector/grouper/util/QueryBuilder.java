@@ -28,6 +28,7 @@ import java.util.Set;
 public class QueryBuilder {
     private static final Log LOG = Log.getLog(QueryBuilder.class);
     private final String tableName;
+    private static final String _WHERE = "WHERE";
     private String translatedFilter;
     private Map<String, Class> columns;
 
@@ -54,6 +55,11 @@ public class QueryBuilder {
     public String build() {
         String statementString = null;
         statementString = select(columns, tableName);
+
+        if(translatedFilter!=null){
+
+        
+        }
 
         return statementString;
     }
