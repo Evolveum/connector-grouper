@@ -106,8 +106,6 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             throw new InvalidAttributeValueException("Attribute of type ResultsHandler is not provided.");
         }
 
-        //TODO remove
-        LOG.ok("1Test: {0}", objectClass.is(ObjectProcessing.SUBJECT_NAME));
 
         if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
             SubjectProcessing subjectProcessing = new SubjectProcessing();
@@ -117,8 +115,8 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             subjectProcessing.executeQuery(filter, resultsHandler, operationOptions, connection.getConnection());
 
         }
-        LOG.ok("2Test: {0}", objectClass == ObjectClass.GROUP);
-        if (objectClass == ObjectClass.GROUP) {
+
+        if (objectClass.is(ObjectClass.GROUP_NAME)) {
             GroupProcessing groupProcessing = new GroupProcessing();
 
             LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
@@ -126,7 +124,8 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             groupProcessing.executeQuery(filter, resultsHandler, operationOptions, connection.getConnection());
 
         }
-        LOG.ok("END The object class for which the filter will be executed: {0}, the subject object class:", objectClass.getDisplayNameKey());
+
+        LOG.ok("Finished evaluating the execute query operation.");
     }
 
     @Override
