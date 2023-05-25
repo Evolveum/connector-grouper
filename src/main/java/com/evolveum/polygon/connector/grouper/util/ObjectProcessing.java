@@ -16,24 +16,38 @@
 
 package com.evolveum.polygon.connector.grouper.util;
 
+import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
-import java.math.BigInteger;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.*;
 
 public abstract class ObjectProcessing {
-
+    private static final Log LOG = Log.getLog(ObjectProcessing.class);
     public static final String SUBJECT_NAME = ObjectClassUtil.createSpecialName("SUBJECT");
     protected static final String ATTR_MODIFIED = "last_modified";
+    protected static final String TABLE_MEMBERSHIP_NAME = "gr_mp_memberships";
+    protected static final String ATTR_GR_ID_IDX = "group_id_index";
+    protected static final String ATTR_SCT_ID_IDX = "subject_id_index";
 
     // TODO MAP AS ACTIVATION ATTR?
     protected static final String ATTR_DELETED = "deleted";
+    private static final ObjectClass O_CLASS = null;
+    private static final String ATTR_UID = null;
 
     protected Map<String, Class> objectColumns = Map.ofEntries(
+            Map.entry(ATTR_MODIFIED, Long.class),
+            Map.entry(ATTR_DELETED, String.class)
+    );
+
+    protected Map<String, Class> membershipColumns = Map.ofEntries(
+            Map.entry(ATTR_GR_ID_IDX, Long.class),
+            Map.entry(ATTR_SCT_ID_IDX, Long.class),
             Map.entry(ATTR_MODIFIED, Long.class),
             Map.entry(ATTR_DELETED, String.class)
     );
@@ -44,6 +58,97 @@ public abstract class ObjectProcessing {
     public abstract void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
             , Connection connection);
 
-    protected abstract boolean handleSqlObject(ResultSet resultSet, ResultsHandler handler, OperationOptions oo)
-            throws SQLException;
+//    protected ConnectorObjectBuilder buildConnectorObject(ResultSet resultSet, Map<String, Class> columns,
+//                                                          ConnectorObjectBuilder ob) throws SQLException {
+//        return buildConnectorObject(null, null, resultSet, null, columns, ob);
+//    }
+
+    protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, String uid_name,
+                                                          ResultSet resultSet, OperationOptions oo,
+                                                          Map<String, Class> columns) throws SQLException {
+        return buildConnectorObject(o_class, uid_name, resultSet, oo, columns, null);
+    }
+
+    protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, String uid_name,
+                                                          ResultSet resultSet, OperationOptions oo,
+                                                          Map<String, Class> columns, ConnectorObjectBuilder ob)
+            throws SQLException {
+
+        LOG.info("Evaluation of SQL objects present in result set.");
+
+        ConnectorObjectBuilder builder;
+        if (ob != null) {
+
+            builder = ob;
+        } else if (o_class != null) {
+
+            builder = new ConnectorObjectBuilder();
+            builder.setObjectClass(o_class);
+        } else {
+
+            throw new ConnectorException("Unexpected exception while building connector object, object builder nor " +
+                    "object class present in method invocation.");
+        }
+
+
+        ResultSetMetaData meta = resultSet.getMetaData();
+
+        int count = meta.getColumnCount();
+        LOG.ok("Number of columns returned from result set object: {0}", count);
+        // TODO Based on options the handling might be paginated
+        // options
+
+        for (int i = 1; i <= count; i++) {
+            String name = meta.getColumnName(i);
+            LOG.ok("Evaluation of column with name {0}", name);
+
+            if (uid_name != null && name.equals(uid_name)) {
+
+                String nameVal = Long.toString(resultSet.getLong(i));
+                LOG.ok("Addition of UID and Name attribute {0}, the value {1}", name, nameVal);
+
+
+                builder.setName(nameVal);
+                builder.setUid(new Uid(nameVal));
+
+            } else {
+
+                if (columns.containsKey(name)) {
+                    Class type = columns.get(name);
+
+                    if (type.equals(Long.class)) {
+
+                        LOG.ok("Addition of Long type attribute for attribute from column with name {0}", name);
+                        builder.addAttribute(name, resultSet.getLong(i));
+                    }
+
+                    if (type.equals(String.class)) {
+
+                        LOG.ok("Addition of String type attribute for attribute from column with name {0}", name);
+                        builder.addAttribute(name, resultSet.getString(i));
+                    }
+
+                } else {
+
+                    LOG.info("SQL object handling discovered a column which is not present in the original schema set. " +
+                            "The column name: {0}", name);
+                }
+            }
+        }
+
+        LOG.ok("Returning builder");
+        return builder;
+    }
+
+    protected abstract ConnectorObjectBuilder populateMembershipAttribute(String uid, ConnectorObjectBuilder ob,
+                                                                          Connection connection) throws SQLException;
+
+    protected Set<String> getAttributesToGet(OperationOptions operationOptions) {
+        if (operationOptions != null || operationOptions.getAttributesToGet() != null) {
+
+            return new HashSet<>(Arrays.asList(operationOptions.getAttributesToGet()));
+        }
+
+        return null;
+    }
 }

@@ -33,7 +33,20 @@ public class QueryBuilder {
     private ResourceQuery translatedFilter;
     private Map<String, Class> columns;
 
-    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Class> columns, String table, String uniqueName,
+    private Map<String, Class> selectColumns;
+
+    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Class> columns, Map<String, Class> selectColumns,
+                        String table, String uniqueName) {
+        this(objectClass, filter, columns, selectColumns, table, uniqueName, null);
+    }
+
+    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Class> columns, String table,
+                        String uniqueName, OperationOptions oo) {
+        this(objectClass, filter, columns, null, table, uniqueName, oo);
+    }
+
+    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Class> columns,
+                        Map<String, Class> selectColumns, String table, String uniqueName,
                         OperationOptions operationOptions) {
 
         if (filter == null) {
@@ -51,14 +64,23 @@ public class QueryBuilder {
         }
 
         this.columns = columns;
+        this.selectColumns = selectColumns;
         this.tableName = table;
     }
 
     public String build() {
         String statementString = null;
-        statementString = select(columns, tableName);
 
-        if(translatedFilter!=null){
+        if (selectColumns == null) {
+
+            statementString = select(columns, tableName);
+        } else {
+
+            statementString = select(selectColumns, tableName);
+        }
+
+
+        if (translatedFilter != null) {
 
             statementString = statementString + " " + _WHERE + " " + translatedFilter.getQuery();
         }
@@ -67,6 +89,7 @@ public class QueryBuilder {
     }
 
     private String select(Map<String, Class> columns, String tableName) {
+
 
         if (tableName.isEmpty()) {
             throw new ConnectorException("Exception while building select statements for database query, no table name" +

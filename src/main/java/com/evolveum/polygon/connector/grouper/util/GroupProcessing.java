@@ -17,13 +17,13 @@
 package com.evolveum.polygon.connector.grouper.util;
 
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
+import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
-import java.math.BigInteger;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class GroupProcessing extends ObjectProcessing {
 
@@ -32,8 +32,14 @@ public class GroupProcessing extends ObjectProcessing {
     private static final String ATTR_DISPLAY_NAME = "display_name";
     private static final String ATTR_DESCRIPTION = "description";
     private static final String ATTR_ID_IDX = "id_index";
+
+    private static final String ATTR_MEMBERS = "members";
+
     private static final String TABLE_GR_NAME = "gr_mp_groups";
+    private static final String ATTR_UID = ATTR_ID_IDX;
+
     protected Map<String, Class> columns = new HashMap<>();
+    private static final ObjectClass O_CLASS = ObjectClass.GROUP;
 
     public GroupProcessing() {
         columns.put(ATTR_NAME, String.class);
@@ -80,6 +86,12 @@ public class GroupProcessing extends ObjectProcessing {
         deleted.setRequired(false).setType(Integer.class).setCreateable(false).setUpdateable(false).setReadable(true);
         subjectObjClassBuilder.addAttributeInfo(deleted.build());
 
+        AttributeInfoBuilder members = new AttributeInfoBuilder(ATTR_MEMBERS);
+        members.setRequired(false).setType(String.class).setMultiValued(true)
+                .setCreateable(false).setUpdateable(false).setReadable(true)
+                .setReturnedByDefault(false)
+                .build();
+
         schemaBuilder.defineObjectClass(subjectObjClassBuilder.build());
     }
 
@@ -88,7 +100,7 @@ public class GroupProcessing extends ObjectProcessing {
         LOG.ok("Processing trough executeQuery methods for the object class {0}",
                 ObjectClass.GROUP_NAME);
 
-        QueryBuilder queryBuilder = new QueryBuilder(ObjectClass.GROUP, filter, columns, TABLE_GR_NAME, ATTR_ID_IDX,
+        QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, filter, columns, TABLE_GR_NAME, ATTR_ID_IDX,
                 operationOptions);
         String query = queryBuilder.build();
         ResultSet result = null;
@@ -104,7 +116,34 @@ public class GroupProcessing extends ObjectProcessing {
                 //TODO
                 LOG.ok("TODO scanning result set");
                 LOG.ok(result.toString());
-                handleSqlObject(result, handler, operationOptions);
+                ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, ATTR_UID, result, operationOptions,
+                        objectColumns);
+
+                if (getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
+
+                    if (filter instanceof EqualsFilter) {
+                        LOG.ok("Processing Equals Query");
+                        final EqualsFilter equalsFilter = (EqualsFilter) filter;
+                        Attribute fAttr = equalsFilter.getAttribute();
+
+                        if (Uid.NAME.equals(fAttr.getName())) {
+
+                            LOG.ok("Processing Equals Query based on UID.");
+                            String uid = ((Uid) fAttr).getUidValue();
+                            populateMembershipAttribute(uid, co, connection);
+                        } else {
+
+                            //TODO error
+                        }
+                    } else {
+
+                        // TODO error
+                    }
+                }
+                ConnectorObject o = co.build();
+
+                LOG.ok("Handling connector object with the uid: {0}", o.getUid());
+                handler.handle(o);
             }
 
         } catch (SQLException e) {
@@ -115,60 +154,92 @@ public class GroupProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected boolean handleSqlObject(ResultSet resultSet, ResultsHandler handler, OperationOptions oo)
+    protected ConnectorObjectBuilder populateMembershipAttribute(String uid, ConnectorObjectBuilder ob,
+                                                                 Connection connection) throws SQLException {
+
+        String uidValue = ob.build().getUid().getUidValue();
+        EqualsFilter equalsFilter = new EqualsFilter(AttributeBuilder.build(ATTR_GR_ID_IDX, uidValue));
+        Map<String, Class> idAttrDescriptorMap = Collections.singletonMap(ATTR_GR_ID_IDX, Long.class);
+        Map<String, Class> membAttrDescriptorMap = Collections.singletonMap(ATTR_SCT_ID_IDX, Long.class);
+
+        QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, equalsFilter, idAttrDescriptorMap, membAttrDescriptorMap,
+                TABLE_MEMBERSHIP_NAME, ATTR_ID_IDX);
+
+        String query = queryBuilder.build();
+        LOG.info("Query about to be executed for membership fetch: {0}", query);
+
+        PreparedStatement preparedStatement = connection.prepareStatement(query);
+        ResultSet result = preparedStatement.executeQuery();
+
+        HashMap<String, Set<Object>> multiValues = new HashMap<>();
+
+        while (result.next()) {
+
+            buildMultiValued(result, membAttrDescriptorMap, multiValues);
+        }
+
+        for (String attrName : multiValues.keySet()) {
+            LOG.ok("Adding attribute values for the attribute {0} to the attribute builder.", attrName);
+
+            if (ATTR_SCT_ID_IDX.equals(attrName)){
+
+                ob.addAttribute(ATTR_MEMBERS, multiValues.get(attrName));
+            }
+
+        }
+
+        return ob;
+    }
+
+    private void buildMultiValued(ResultSet result, Map<String, Class> columns, HashMap<String, Set<Object>> multiValues)
             throws SQLException {
 
-        LOG.info("Evaluation of SQL objects present in result set.");
-        ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
-        builder.setObjectClass(ObjectClass.GROUP);
+        LOG.info("Evaluation of SQL objects present in result set for multivalued attributes.");
 
-        ResultSetMetaData meta = resultSet.getMetaData();
+        ResultSetMetaData meta = result.getMetaData();
 
         int count = meta.getColumnCount();
-        LOG.ok("Number of columns returned from result set object");
+        LOG.ok("Number of columns returned from result set object: {0}", count);
         // TODO Based on options the handling might be paginated
         // options
 
         for (int i = 1; i <= count; i++) {
             String name = meta.getColumnName(i);
             LOG.ok("Evaluation of column with name {0}", name);
+            Set<Object> attrValues = new HashSet<>();
 
-            if (!name.equals(ATTR_ID_IDX)) {
+            if (multiValues.containsKey(name)) {
 
-
-                if (columns.containsKey(name)) {
-                    Class type = columns.get(name);
-
-                    if (type.equals(Long.class)) {
-
-                        LOG.ok("Addition of Long type attribute for attribute from column with name {0}", name);
-                        builder.addAttribute(name, resultSet.getLong(i));
-                    }
-
-                    if (type.equals(String.class)) {
-
-                        LOG.ok("Addition of String type attribute for attribute from column with name {0}", name);
-                        builder.addAttribute(name, resultSet.getString(i));
-                    }
-
-                } else {
-
-                    LOG.info("SQL object handling discovered a column which is not present in the original schema set. " +
-                            "The column name: {0}", name);
-                }
-            } else {
-                String nameVal = Long.toString(resultSet.getLong(i));
-                LOG.ok("Addition of UID and Name attribute {0}, the value {1}", name, nameVal);
-
-
-                builder.setName(nameVal);
-                builder.setUid(new Uid(nameVal));
-
+                attrValues = multiValues.get(name);
             }
 
+            if (columns.containsKey(name)) {
+                Class type = columns.get(name);
+
+                if (type.equals(Long.class)) {
+
+                    LOG.ok("Addition of Long type attribute for attribute from column with name {0} to the multivalued" +
+                            " collection", name);
+
+                    attrValues.add(result.getLong(i));
+                    multiValues.put(name, attrValues);
+                }
+
+                if (type.equals(String.class)) {
+
+                    LOG.ok("Addition of String type attribute for attribute from column with name {0} to the multivalued" +
+                            " collection", name);
+
+                    attrValues.add(result.getString(i));
+                    multiValues.put(name, attrValues);
+                }
+
+            } else {
+
+                LOG.info("SQL object handling discovered during multivalued attribute evaluation a column which is not" +
+                        " present in the original schema set. The column name: {0}", name);
+            }
         }
 
-        LOG.ok("Handling resulting object");
-        return handler.handle(builder.build());
     }
 }

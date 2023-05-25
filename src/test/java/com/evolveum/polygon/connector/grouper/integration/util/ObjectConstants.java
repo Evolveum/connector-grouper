@@ -24,10 +24,11 @@ public interface ObjectConstants {
     String ATTR_NAME = "name";
     String ATTR_DISPLAY_NAME = "display_name";
     String ATTR_DESCRIPTION = "description";
+    String ATTR_MEMBERS = "members";
 
     // SUBJECT OBJECT CLASS
     String ATTR_ID = "subject_id";
-
+    String ATTR_MEMBER_OF = "member_of";
     // COMMON
     String SUBJECT_NAME = ObjectClassUtil.createSpecialName("SUBJECT");
     String ATTR_ID_IDX = "id_index";

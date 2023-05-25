@@ -18,8 +18,15 @@ package com.evolveum.polygon.connector.grouper.util;
 
 import com.evolveum.polygon.connector.grouper.GrouperConnector;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
+import org.identityconnectors.framework.common.objects.OperationOptionInfoBuilder;
+import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.SchemaBuilder;
+import org.identityconnectors.framework.spi.operations.SearchOp;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class SchemaTranslator {
     private static final Log LOG = Log.getLog(SchemaTranslator.class);
@@ -35,8 +42,20 @@ public class SchemaTranslator {
         userProcessing.buildObjectClass(schemaBuilder);
 
         // TODO schema limitation ? Maybe useful in list all
-        //schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class);
+        schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class);
+        schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes(), SearchOp.class);
 
         return schemaBuilder.build();
+    }
+
+    public Set<String> getAttributesToGet(String type, OperationOptions options) {
+
+        Set<String> attributesToGet = new HashSet<>();
+        if (options.getAttributesToGet() != null) {
+            for (String a : options.getAttributesToGet()) {
+                attributesToGet.add(a);
+            }
+        }
+        return attributesToGet;
     }
 }
