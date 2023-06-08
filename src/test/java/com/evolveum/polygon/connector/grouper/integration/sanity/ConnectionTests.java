@@ -47,7 +47,7 @@ public class ConnectionTests extends CommonTestClass {
 
     @Test(expectedExceptions = ConnectionFailedException.class)
     public void initializeNotCorrectConfigurationValuesAndTestConnectionSelectFail() {
-// TODO just a random IP
+// Just a random IP
         grouperConfiguration.setHost("192.168.208.001");
         grouperConfiguration.setPort("27960");
         grouperConfiguration.validate();

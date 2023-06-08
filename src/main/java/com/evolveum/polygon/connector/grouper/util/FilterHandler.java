@@ -18,12 +18,11 @@ package com.evolveum.polygon.connector.grouper.util;
 
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeUtil;
-import org.identityconnectors.framework.common.objects.Name;
-import org.identityconnectors.framework.common.objects.Uid;
+import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.*;
 
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -66,7 +65,13 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
     @Override
     public ResourceQuery visitContainsAllValuesFilter(ResourceQuery r, ContainsAllValuesFilter containsAllValuesFilter) {
-        return null;
+        LOG.ok("Processing through CONTAINS ALL VALUES filter expression");
+
+        Attribute attr = containsAllValuesFilter.getAttribute();
+        String snippet = processStringFilter(attr, EQUALS_OP, r);
+        r.setQuery(snippet);
+
+        return r;
     }
 
     @Override
@@ -151,46 +156,95 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                 LOG.error("Unexpected error, attribute {0} without a value.", name);
             }
 
-            String uidName = r.getObjectClassUidName();
 
-            if (uidName == null) {
+            name = evaluateNonNativeAttributeNames(r, name);
 
-                throw new ConnectorException("UID name not present in objet type definition in resource query.");
-            }
+            Map<String, Map<String, Class>> tableAndcolumns = r.getColumnInformation();
+            String wrappedValue = null;
+            Iterator<String> iterator = tableAndcolumns.keySet().iterator();
+            while (iterator.hasNext()) {
+                String tableName = iterator.next();
+                Map<String, Class> columns = tableAndcolumns.get(tableName);
 
+                if (columns.containsKey(name)) {
 
-            if (name.equals(Uid.NAME) || name.equals(Name.NAME)) {
+                    wrappedValue = wrapValue(columns, name, singleValue);
+                    name = tableName + "." + name;
+                    break;
+                } else {
 
-                LOG.ok("Property name equals UID or Name value");
+                    if (!iterator.hasNext()) {
 
-                name = uidName;
+                        throw new ConnectorException("Unexpected exception in string filter processing," +
+                                " during the processing of the parameter: " + name);
+                    }
+                }
             }
 
             query.append(name);
             query.append(_PADDING);
             query.append(operator);
             query.append(_PADDING);
-            query.append(wrapValue(r, name, singleValue));
+            query.append(wrappedValue);
         }
 
         return query.toString();
     }
 
-    private String wrapValue(ResourceQuery r, String name, String value) {
+    private String evaluateNonNativeAttributeNames(ResourceQuery r, String name) {
+
+        if (Uid.NAME.equals(name)) {
+
+            LOG.ok("Property name equals UID value");
+            ObjectClass oc = r.getObjectClass();
+
+            if (oc.is(ObjectClass.GROUP_NAME)) {
+
+                return GroupProcessing.ATTR_UID;
+            } else {
+
+                return SubjectProcessing.ATTR_UID;
+            }
+
+        }
+
+        if (Name.NAME.equals(name)) {
+
+            LOG.ok("Property name equals Name value");
+
+            ObjectClass oc = r.getObjectClass();
+
+            if (oc.is(ObjectClass.GROUP_NAME)) {
+
+                return GroupProcessing.ATTR_NAME;
+            } else {
+
+                return SubjectProcessing.ATTR_NAME;
+            }
+        }
+
+
+        if (GroupProcessing.ATTR_MEMBERS.equals(name) || SubjectProcessing.ATTR_MEMBER_OF.equals(name)) {
+
+            ObjectClass oc = r.getObjectClass();
+            if (oc.is(ObjectClass.GROUP_NAME)) {
+
+                return GroupProcessing.ATTR_MEMBERS_NATIVE;
+            } else {
+
+                return SubjectProcessing.ATTR_MEMBER_OF_NATIVE;
+            }
+        }
+
+        return name;
+    }
+
+    private String wrapValue(Map<String, Class> columns, String name, String value) {
         LOG.ok("Evaluating value wrapper for the property: {0}", name);
 
 
-        Map<String, Class> columns = r.getColumnInformation();
-        // String uidName = r.getObjectClassUidName();
-
-//        if (name.equals(Uid.NAME) || name.equals(Name.NAME)) {
-//
-//            LOG.ok("Property name equals UID or Name value");
-//
-//            name = uidName;
-//        }
-
         if (columns.containsKey(name)) {
+
             Class type = columns.get(name);
 
             if (type.equals(Long.class)) {
@@ -205,13 +259,9 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                 return _S_COL_VALUE_WRAPPER + value + _S_COL_VALUE_WRAPPER;
             }
 
-        } else {
-
-            throw new ConnectorException("Query string contains parameter which si not part of the resource schema: " +
-                    name);
         }
 
-        throw new ConnectorException("Unexpected exception in value wrapper evaluation duing the proccessing of the" +
+        throw new ConnectorException("Unexpected exception in value wrapper evaluation during the processing of the" +
                 "parameter: " + name);
     }
 }

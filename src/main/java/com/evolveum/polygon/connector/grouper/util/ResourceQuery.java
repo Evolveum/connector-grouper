@@ -9,14 +9,15 @@ public class ResourceQuery {
     private static final Log LOG = Log.getLog(ResourceQuery.class);
     private ObjectClass objectClass;
     private String objectClassUidName;
-    private Map<String, Class> columnInformation;
+    private String objectClassNameName;
+    private String membershipAttr;
+    private Map<String, Map<String, Class>> columnInformation;
 
     private String query = null;
 
-    public ResourceQuery(ObjectClass objectClass, String objectClassUidName, Map<String, Class> columnInformation) {
+    public ResourceQuery(ObjectClass objectClass, Map<String, Map<String, Class>> columnInformation) {
 
         this.objectClass = objectClass;
-        this.objectClassUidName = objectClassUidName;
         this.columnInformation = columnInformation;
 
     }
@@ -25,11 +26,7 @@ public class ResourceQuery {
         return objectClass;
     }
 
-    public String getObjectClassUidName() {
-        return objectClassUidName;
-    }
-
-    public Map<String, Class> getColumnInformation() {
+    public Map<String, Map<String, Class>> getColumnInformation() {
         return columnInformation;
     }
 
@@ -40,4 +37,5 @@ public class ResourceQuery {
     public void setQuery(String query) {
         this.query = query;
     }
+
 }

@@ -17,7 +17,6 @@
 package com.evolveum.polygon.connector.grouper.util;
 
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
@@ -28,34 +27,38 @@ import java.util.*;
 public class GroupProcessing extends ObjectProcessing {
 
     private static final Log LOG = Log.getLog(GroupProcessing.class);
-    private static final String ATTR_NAME = "group_name";
     private static final String ATTR_DISPLAY_NAME = "display_name";
     private static final String ATTR_DESCRIPTION = "description";
     private static final String ATTR_ID_IDX = "id_index";
-
-    private static final String ATTR_MEMBERS = "members";
-
     private static final String TABLE_GR_NAME = "gr_mp_groups";
-    private static final String ATTR_UID = ATTR_ID_IDX;
-
+    protected static final String ATTR_UID = ATTR_ID_IDX;
+    protected static final String ATTR_NAME = "group_name";
+    protected static final String ATTR_MEMBERS = "members";
+    protected static final String ATTR_MEMBERS_NATIVE = ATTR_SCT_ID_IDX;
     protected Map<String, Class> columns = new HashMap<>();
     private static final ObjectClass O_CLASS = ObjectClass.GROUP;
+
+    protected Map<String, Class> grMembershipColumns = Map.ofEntries(
+            Map.entry(ATTR_GR_ID_IDX, Long.class),
+            Map.entry(ATTR_SCT_ID_IDX, Long.class)
+    );
 
     public GroupProcessing() {
         columns.put(ATTR_NAME, String.class);
         columns.put(ATTR_DISPLAY_NAME, String.class);
         columns.put(ATTR_DESCRIPTION, String.class);
         columns.put(ATTR_ID_IDX, Long.class);
+
         this.columns.putAll(objectColumns);
 
     }
 
     @Override
     public void buildObjectClass(SchemaBuilder schemaBuilder) {
+        LOG.info("Building object class definition for {0}", ObjectClass.GROUP_NAME);
 
-
-        ObjectClassInfoBuilder subjectObjClassBuilder = new ObjectClassInfoBuilder();
-        subjectObjClassBuilder.setType(ObjectClass.GROUP_NAME);
+        ObjectClassInfoBuilder groupObjClassBuilder = new ObjectClassInfoBuilder();
+        groupObjClassBuilder.setType(ObjectClass.GROUP_NAME);
 
         //subjectObjClassBuilder.addAttributeInfo(OperationalAttributeInfos.ENABLE);
         //subjectObjClassBuilder.addAttributeInfo(OperationalAttributeInfos.PASSWORD);
@@ -64,86 +67,101 @@ public class GroupProcessing extends ObjectProcessing {
 
         AttributeInfoBuilder id_index = new AttributeInfoBuilder(ATTR_ID_IDX);
         id_index.setRequired(true).setType(Integer.class).setCreateable(false).setUpdateable(false).setReadable(true);
-        subjectObjClassBuilder.addAttributeInfo(id_index.build());
+        groupObjClassBuilder.addAttributeInfo(id_index.build());
 
         AttributeInfoBuilder name = new AttributeInfoBuilder(ATTR_NAME);
         name.setRequired(false).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true);
-        subjectObjClassBuilder.addAttributeInfo(name.build());
+        groupObjClassBuilder.addAttributeInfo(name.build());
 
         AttributeInfoBuilder display_name = new AttributeInfoBuilder(ATTR_DISPLAY_NAME);
         display_name.setRequired(false).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true);
-        subjectObjClassBuilder.addAttributeInfo(display_name.build());
+        groupObjClassBuilder.addAttributeInfo(display_name.build());
 
         AttributeInfoBuilder description = new AttributeInfoBuilder(ATTR_DESCRIPTION);
         description.setRequired(false).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true);
-        subjectObjClassBuilder.addAttributeInfo(description.build());
+        groupObjClassBuilder.addAttributeInfo(description.build());
 
         AttributeInfoBuilder last_modified = new AttributeInfoBuilder(ATTR_MODIFIED);
         last_modified.setRequired(false).setType(Integer.class).setCreateable(false).setUpdateable(false).setReadable(true);
-        subjectObjClassBuilder.addAttributeInfo(last_modified.build());
+        groupObjClassBuilder.addAttributeInfo(last_modified.build());
 
         AttributeInfoBuilder deleted = new AttributeInfoBuilder(ATTR_DELETED);
         deleted.setRequired(false).setType(Integer.class).setCreateable(false).setUpdateable(false).setReadable(true);
-        subjectObjClassBuilder.addAttributeInfo(deleted.build());
+        groupObjClassBuilder.addAttributeInfo(deleted.build());
 
         AttributeInfoBuilder members = new AttributeInfoBuilder(ATTR_MEMBERS);
         members.setRequired(false).setType(String.class).setMultiValued(true)
                 .setCreateable(false).setUpdateable(false).setReadable(true)
-                .setReturnedByDefault(false)
-                .build();
+                .setReturnedByDefault(false);
+        groupObjClassBuilder.addAttributeInfo(members.build());
 
-        schemaBuilder.defineObjectClass(subjectObjClassBuilder.build());
+        schemaBuilder.defineObjectClass(groupObjClassBuilder.build());
     }
 
     public void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
             , Connection connection) {
+
         LOG.ok("Processing trough executeQuery methods for the object class {0}",
                 ObjectClass.GROUP_NAME);
 
-        QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, filter, columns, TABLE_GR_NAME, ATTR_ID_IDX,
-                operationOptions);
+        QueryBuilder queryBuilder;
+        if (!getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
+
+            queryBuilder = new QueryBuilder(O_CLASS, filter, Map.of(TABLE_GR_NAME, columns),
+                    TABLE_GR_NAME, operationOptions);
+        } else {
+
+            Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
+            tablesAndColumns.put(TABLE_GR_NAME, columns);
+            tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, grMembershipColumns);
+
+            Map<String, Map<String, String>> joinMap = Map.of(ATTR_ID_IDX,
+                    Map.of(TABLE_MEMBERSHIP_NAME, ATTR_GR_ID_IDX));
+
+            queryBuilder = new QueryBuilder(O_CLASS, filter,
+                    tablesAndColumns, TABLE_GR_NAME, joinMap, operationOptions);
+        }
+
         String query = queryBuilder.build();
         ResultSet result = null;
         LOG.info("Query about to be executed: {0}", query);
         try {
-            //TODO
-            LOG.ok("TODO about to execute prepared statement");
+
             PreparedStatement prepareStatement = connection.prepareStatement(query);
             result = prepareStatement.executeQuery();
+            ConnectorObjectBuilder co = null;
 
             while (result.next()) {
-                // create the connector object
-                //TODO
-                LOG.ok("TODO scanning result set");
+
                 LOG.ok(result.toString());
-                ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, ATTR_UID, result, operationOptions,
-                        objectColumns);
 
-                if (getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
+                if (filter instanceof EqualsFilter) {
 
-                    if (filter instanceof EqualsFilter) {
-                        LOG.ok("Processing Equals Query");
-                        final EqualsFilter equalsFilter = (EqualsFilter) filter;
-                        Attribute fAttr = equalsFilter.getAttribute();
+                    LOG.ok("Processing Equals Query");
+                    final EqualsFilter equalsFilter = (EqualsFilter) filter;
+                    Attribute fAttr = equalsFilter.getAttribute();
+                    if (Uid.NAME.equals(fAttr.getName()) &&
+                            getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
 
-                        if (Uid.NAME.equals(fAttr.getName())) {
+                        co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_NAME, result, operationOptions,
+                                columns);
 
-                            LOG.ok("Processing Equals Query based on UID.");
-                            String uid = ((Uid) fAttr).getUidValue();
-                            populateMembershipAttribute(uid, co, connection);
-                        } else {
+                        populateMembershipAttribute(result, co);
+                        handler.handle(co.build());
+                        break;
 
-                            //TODO error
-                        }
                     } else {
 
-                        // TODO error
+                        co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_NAME, result, operationOptions,
+                                columns);
+                        handler.handle(co.build());
                     }
-                }
-                ConnectorObject o = co.build();
+                } else {
 
-                LOG.ok("Handling connector object with the uid: {0}", o.getUid());
-                handler.handle(o);
+                    co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_NAME, result, operationOptions,
+                            columns);
+                    handler.handle(co.build());
+                }
             }
 
         } catch (SQLException e) {
@@ -154,38 +172,25 @@ public class GroupProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected ConnectorObjectBuilder populateMembershipAttribute(String uid, ConnectorObjectBuilder ob,
-                                                                 Connection connection) throws SQLException {
-
-        String uidValue = ob.build().getUid().getUidValue();
-        EqualsFilter equalsFilter = new EqualsFilter(AttributeBuilder.build(ATTR_GR_ID_IDX, uidValue));
-        Map<String, Class> idAttrDescriptorMap = Collections.singletonMap(ATTR_GR_ID_IDX, Long.class);
-        Map<String, Class> membAttrDescriptorMap = Collections.singletonMap(ATTR_SCT_ID_IDX, Long.class);
-
-        QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, equalsFilter, idAttrDescriptorMap, membAttrDescriptorMap,
-                TABLE_MEMBERSHIP_NAME, ATTR_ID_IDX);
-
-        String query = queryBuilder.build();
-        LOG.info("Query about to be executed for membership fetch: {0}", query);
-
-        PreparedStatement preparedStatement = connection.prepareStatement(query);
-        ResultSet result = preparedStatement.executeQuery();
+    protected ConnectorObjectBuilder populateMembershipAttribute(ResultSet result, ConnectorObjectBuilder ob)
+            throws SQLException {
 
         HashMap<String, Set<Object>> multiValues = new HashMap<>();
 
+        buildMultiValued(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues);
         while (result.next()) {
 
-            buildMultiValued(result, membAttrDescriptorMap, multiValues);
+            buildMultiValued(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues);
+            ;
         }
 
         for (String attrName : multiValues.keySet()) {
             LOG.ok("Adding attribute values for the attribute {0} to the attribute builder.", attrName);
 
-            if (ATTR_SCT_ID_IDX.equals(attrName)){
+            if (ATTR_SCT_ID_IDX.equals(attrName)) {
 
                 ob.addAttribute(ATTR_MEMBERS, multiValues.get(attrName));
             }
-
         }
 
         return ob;
@@ -221,7 +226,7 @@ public class GroupProcessing extends ObjectProcessing {
                     LOG.ok("Addition of Long type attribute for attribute from column with name {0} to the multivalued" +
                             " collection", name);
 
-                    attrValues.add(result.getLong(i));
+                    attrValues.add(Long.toString(result.getLong(i)));
                     multiValues.put(name, attrValues);
                 }
 

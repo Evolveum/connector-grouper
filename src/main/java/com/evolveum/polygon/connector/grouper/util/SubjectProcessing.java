@@ -29,30 +29,34 @@ public class SubjectProcessing extends ObjectProcessing {
     private static final Log LOG = Log.getLog(SubjectProcessing.class);
     private static final String ATTR_ID = "subject_id";
     private static final String ATTR_ID_IDX = "subject_id_index";
-    private static final String ATTR_MEMBER_OF = "member_of";
     private static final String TABLE_SU_NAME = "gr_mp_subjects";
     private static final ObjectClass O_CLASS = new ObjectClass(SUBJECT_NAME);
-    private static final String ATTR_UID = ATTR_ID_IDX;
+    protected static final String ATTR_UID = ATTR_ID_IDX;
+    protected static final String ATTR_NAME = ATTR_ID;
+    protected static final String ATTR_MEMBER_OF = "member_of";
+    protected static final String ATTR_MEMBER_OF_NATIVE = ATTR_GR_ID_IDX;
     protected Map<String, Class> columns = new HashMap<>();
+    protected Map<String, Class> suMembershipColumns = Map.ofEntries(
+            Map.entry(ATTR_GR_ID_IDX, Long.class),
+            Map.entry(ATTR_SCT_ID_IDX, Long.class)
+
+    );
 
 
     public SubjectProcessing() {
-
         columns.put(ATTR_ID_IDX, Long.class);
         columns.put(ATTR_ID, String.class);
-        this.columns.putAll(objectColumns);
 
+        this.columns.putAll(objectColumns);
     }
 
     @Override
     public void buildObjectClass(SchemaBuilder schemaBuilder) {
-
+        LOG.info("Building object class definition for {0}", SUBJECT_NAME);
 
         ObjectClassInfoBuilder subjectObjClassBuilder = new ObjectClassInfoBuilder();
         subjectObjClassBuilder.setType(SUBJECT_NAME);
 
-        //subjectObjClassBuilder.addAttributeInfo(OperationalAttributeInfos.ENABLE);
-        //subjectObjClassBuilder.addAttributeInfo(OperationalAttributeInfos.PASSWORD);
 
         //Read-only,
         AttributeInfoBuilder id = new AttributeInfoBuilder(ATTR_ID);
@@ -70,9 +74,8 @@ public class SubjectProcessing extends ObjectProcessing {
         AttributeInfoBuilder memberOf = new AttributeInfoBuilder(ATTR_MEMBER_OF);
         memberOf.setRequired(false).setType(String.class).setMultiValued(true)
                 .setCreateable(false).setUpdateable(false).setReadable(true)
-                .setReturnedByDefault(false)
-                .build();
-
+                .setReturnedByDefault(false);
+        subjectObjClassBuilder.addAttributeInfo(memberOf.build());
 
         schemaBuilder.defineObjectClass(subjectObjClassBuilder.build());
     }
@@ -81,50 +84,62 @@ public class SubjectProcessing extends ObjectProcessing {
             , Connection connection) {
         LOG.ok("Processing trough executeQuery methods for the object class {0}",
                 SUBJECT_NAME);
+        QueryBuilder queryBuilder = null;
 
-        QueryBuilder queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, columns, TABLE_SU_NAME,
-                ATTR_ID_IDX, operationOptions);
+        if (!getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
+            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, Map.of(TABLE_SU_NAME, columns),
+                    TABLE_SU_NAME, operationOptions);
+        } else {
+            Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
+            tablesAndColumns.put(TABLE_SU_NAME, columns);
+            tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
+
+            Map<String, Map<String, String>> joinMap = Map.of(ATTR_ID_IDX,
+                    Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX));
+
+            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter,
+                    tablesAndColumns, TABLE_SU_NAME, joinMap, operationOptions);
+        }
         String query = queryBuilder.build();
         ResultSet result = null;
 
         LOG.info("Query about to be executed: {0}", query);
 
         try {
-            //TODO
-            LOG.ok("TODO about to execute prepared statement");
+
             PreparedStatement prepareStatement = connection.prepareStatement(query);
             result = prepareStatement.executeQuery();
+            ConnectorObjectBuilder co = null;
 
             while (result.next()) {
-                // create the connector object
-                //TODO
-                LOG.ok("TODO scanning result set");
-                LOG.ok(result.toString());
-                ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, ATTR_UID, result, operationOptions,
-                        objectColumns);
-                if (getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
 
-                    if (filter instanceof EqualsFilter) {
-                        LOG.ok("Processing Equals Query");
-                        final EqualsFilter equalsFilter = (EqualsFilter) filter;
-                        Attribute fAttr = equalsFilter.getAttribute();
+                if (filter instanceof EqualsFilter) {
 
-                        if (Uid.NAME.equals(fAttr.getName())) {
+                    LOG.ok("Processing Equals Query");
+                    final EqualsFilter equalsFilter = (EqualsFilter) filter;
+                    Attribute fAttr = equalsFilter.getAttribute();
+                    if (Uid.NAME.equals(fAttr.getName()) &&
+                            getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
 
-                            LOG.ok("Processing Equals Query based on UID.");
-                            String uid = ((Uid) fAttr).getUidValue();
-                            populateMembershipAttribute(uid, co, connection);
-                        } else {
+                        co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_ID, result, operationOptions,
+                                columns);
 
-                            //TODO error
-                        }
+                        populateMembershipAttribute(result, co);
+                        handler.handle(co.build());
+                        break;
+
                     } else {
 
-                        // TODO error
+                        co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_ID, result, operationOptions,
+                                columns);
+                        handler.handle(co.build());
                     }
-                }
+                } else {
 
-                handler.handle(co.build());
+                    co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_ID, result, operationOptions,
+                            columns);
+                    handler.handle(co.build());
+                }
             }
 
         } catch (SQLException e) {
@@ -135,40 +150,28 @@ public class SubjectProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected ConnectorObjectBuilder populateMembershipAttribute(String uid, ConnectorObjectBuilder ob,
-                                                                 Connection connection) throws SQLException {
-
-        String uidValue = ob.build().getUid().getUidValue();
-        EqualsFilter equalsFilter = new EqualsFilter(AttributeBuilder.build(ATTR_SCT_ID_IDX, uidValue));
-        Map<String, Class> idAttrDescriptorMap = Collections.singletonMap(ATTR_SCT_ID_IDX, Long.class);
-        Map<String, Class> membAttrDescriptorMap = Collections.singletonMap(ATTR_GR_ID_IDX, Long.class);
-
-        QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, equalsFilter, idAttrDescriptorMap, membAttrDescriptorMap,
-                TABLE_MEMBERSHIP_NAME, ATTR_ID_IDX);
-
-        String query = queryBuilder.build();
-        LOG.info("Query about to be executed for membership fetch: {0}", query);
-
-        PreparedStatement preparedStatement = connection.prepareStatement(query);
-        ResultSet result = preparedStatement.executeQuery();
+    protected ConnectorObjectBuilder populateMembershipAttribute(ResultSet result,
+                                                                 ConnectorObjectBuilder ob) throws SQLException {
 
         HashMap<String, Set<Object>> multiValues = new HashMap<>();
+        buildMultiValued(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues);
 
         while (result.next()) {
 
-            buildMultiValued(result, membAttrDescriptorMap, multiValues);
+            buildMultiValued(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues);
         }
 
         for (String attrName : multiValues.keySet()) {
             LOG.ok("Adding attribute values for the attribute {0} to the attribute builder.", attrName);
 
-            if (ATTR_GR_ID_IDX.equals(attrName)){
+            if (ATTR_GR_ID_IDX.equals(attrName)) {
 
                 ob.addAttribute(ATTR_MEMBER_OF, multiValues.get(attrName));
             }
         }
 
         return ob;
+
     }
 
     // TODO pull to parent
@@ -202,7 +205,7 @@ public class SubjectProcessing extends ObjectProcessing {
                     LOG.ok("Addition of Long type attribute for attribute from column with name {0} to the multivalued" +
                             " collection", name);
 
-                    attrValues.add(result.getLong(i));
+                    attrValues.add(Long.toString(result.getLong(i)));
                     multiValues.put(name, attrValues);
                 }
 

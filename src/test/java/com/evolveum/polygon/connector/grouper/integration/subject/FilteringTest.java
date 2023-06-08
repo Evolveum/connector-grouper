@@ -20,6 +20,7 @@ import com.evolveum.polygon.connector.grouper.integration.util.CommonTestClass;
 import com.evolveum.polygon.connector.grouper.integration.util.TestSearchResultsHandler;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
+import org.identityconnectors.framework.common.objects.filter.ContainsAllValuesFilter;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.testng.annotations.Test;
@@ -86,6 +87,30 @@ public class FilteringTest extends CommonTestClass {
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
                 "98"));
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        // TODO also fetches members?
+        // TODO test only
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
+    }
+
+    @Test()
+    public void containsAllValues() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getResultHandler();
+
+        ContainsAllValuesFilter filter = (ContainsAllValuesFilter) FilterBuilder.containsAllValues(
+                AttributeBuilder.build(ATTR_MEMBER_OF,"34"));
 
         grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();

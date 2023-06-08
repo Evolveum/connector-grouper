@@ -31,7 +31,7 @@ import java.util.Set;
 public class SchemaTranslator {
     private static final Log LOG = Log.getLog(SchemaTranslator.class);
     public Schema generateSchema(){
-        LOG.info("Evaluating the schema operation");
+        LOG.info("Generating schema object");
 
 
         SchemaBuilder schemaBuilder = new SchemaBuilder(GrouperConnector.class);

@@ -72,7 +72,14 @@ public class PropertiesParser {
     }
 
     public Integer getValidTimeout() {
-        return Integer.parseInt((String) PROPERTIES.get(_VALID_TIMEOUT));
+        String timeout = (String) PROPERTIES.get(_VALID_TIMEOUT);
+
+        if (timeout.isBlank()){
+
+           return null;
+        }
+
+        return Integer.parseInt(timeout);
     }
 
 //

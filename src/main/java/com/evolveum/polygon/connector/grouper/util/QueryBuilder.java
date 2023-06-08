@@ -22,31 +22,34 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
 public class QueryBuilder {
     private static final Log LOG = Log.getLog(QueryBuilder.class);
-    private final String tableName;
+    private final String selectTable;
     private static final String _WHERE = "WHERE";
+    private static final String _INNER = "INNER";
+    private static final String _JOIN = "JOIN";
+    private static final String _ON = "ON";
     private ResourceQuery translatedFilter;
-    private Map<String, Class> columns;
+    private Map<String, Map<String, Class>> columns;
 
-    private Map<String, Class> selectColumns;
+    private Map<String, Map<String, String>> joinPair;
 
-    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Class> columns, Map<String, Class> selectColumns,
-                        String table, String uniqueName) {
-        this(objectClass, filter, columns, selectColumns, table, uniqueName, null);
+
+//    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Map<String, Class>> columns,
+//                        String selectTable, String uniqueName) {
+//        this(objectClass, filter, columns, selectTable, uniqueName,null,  null);
+//    }
+
+    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Map<String, Class>> columns,
+                        String selectTable, OperationOptions oo) {
+        this(objectClass, filter, columns, selectTable, null, oo);
     }
 
-    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Class> columns, String table,
-                        String uniqueName, OperationOptions oo) {
-        this(objectClass, filter, columns, null, table, uniqueName, oo);
-    }
-
-    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Class> columns,
-                        Map<String, Class> selectColumns, String table, String uniqueName,
+    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Map<String, Class>> columns,
+                        String selectTable, Map<String, Map<String, String>> joinPair,
                         OperationOptions operationOptions) {
 
         if (filter == null) {
@@ -59,63 +62,94 @@ public class QueryBuilder {
             if (filter != null) {
 
                 this.translatedFilter = filter.accept(new FilterHandler(),
-                        new ResourceQuery(objectClass, uniqueName, columns));
+                        new ResourceQuery(objectClass, columns));
             }
         }
 
         this.columns = columns;
-        this.selectColumns = selectColumns;
-        this.tableName = table;
+        this.selectTable = selectTable;
+        this.joinPair = joinPair;
     }
 
     public String build() {
-        String statementString = null;
 
-        if (selectColumns == null) {
+        String statementString = select(columns, selectTable);
 
-            statementString = select(columns, tableName);
-        } else {
+        if (joinPair != null && !joinPair.isEmpty()) {
 
-            statementString = select(selectColumns, tableName);
+            LOG.ok("Starting the parsing of join map.");
+
+            for (String selectTableJoinParam : joinPair.keySet()) {
+
+                Map<String, String> joinParamTable = joinPair.get(selectTableJoinParam);
+                LOG.ok("Parsing join map in regards to join parameter {0} of the table {1}.", selectTableJoinParam,
+                        selectTable);
+
+                for (String joinTable : joinParamTable.keySet()) {
+
+                    String joinParam = joinParamTable.get(joinTable);
+                    LOG.ok("Augmenting Select, joining with with table {0} on the parameter {1}.", joinTable,
+                            joinParam);
+
+                    statementString = statementString + " " + _INNER + " " + _JOIN + " " + joinTable + " " + _ON + " "
+                            + selectTable + "." + selectTableJoinParam + " " + "=" + " " + joinTable + "." + joinParam;
+                }
+            }
         }
-
 
         if (translatedFilter != null) {
 
             statementString = statementString + " " + _WHERE + " " + translatedFilter.getQuery();
         }
 
+        LOG.ok("Using the following statement string in the select statement: {0}.", statementString);
         return statementString;
     }
 
-    private String select(Map<String, Class> columns, String tableName) {
+    private String select(Map<String, Map<String, Class>> tablesAndColumns, String selectTable) {
 
 
-        if (tableName.isEmpty()) {
+        if (selectTable != null && !selectTable.isEmpty()) {
+        } else {
+
             throw new ConnectorException("Exception while building select statements for database query, no table name" +
                     "value defined for query.");
         }
 
-        if (columns.isEmpty()) {
+        if (tablesAndColumns.isEmpty()) {
             throw new ConnectorException("Exception while building select statements for database query, no column" +
                     "values defined for query.");
         } else {
             StringBuilder ret = new StringBuilder("SELECT ");
             boolean first = true;
 
-            for (String key : columns.keySet()) {
-                String name = key;
-                if (!first) {
-                    ret.append(", ");
+            int noOfTables = tablesAndColumns.keySet().size();
+
+            for (String key : tablesAndColumns.keySet()) {
+                Map<String, Class> columnsMap = tablesAndColumns.get(key);
+
+                for (String cName : columnsMap.keySet()) {
+
+                    String name = cName;
+                    LOG.ok("Column name used in select statement: {0}", name);
+                    if (!first) {
+                        ret.append(", ");
+                    }
+
+                    if (noOfTables > 1) {
+                        ret.append(key + "." + name);
+                    } else {
+
+                        ret.append(name);
+                    }
+                    ret.append(" ");
+                    first = false;
                 }
 
-                ret.append(name);
-                ret.append(" ");
-                first = false;
             }
 
             ret.append("FROM ");
-            ret.append(tableName);
+            ret.append(selectTable);
             return ret.toString();
         }
 

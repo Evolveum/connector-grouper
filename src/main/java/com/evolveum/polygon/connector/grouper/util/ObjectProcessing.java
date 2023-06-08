@@ -35,10 +35,7 @@ public abstract class ObjectProcessing {
     protected static final String ATTR_GR_ID_IDX = "group_id_index";
     protected static final String ATTR_SCT_ID_IDX = "subject_id_index";
 
-    // TODO MAP AS ACTIVATION ATTR?
     protected static final String ATTR_DELETED = "deleted";
-    private static final ObjectClass O_CLASS = null;
-    private static final String ATTR_UID = null;
 
     protected Map<String, Class> objectColumns = Map.ofEntries(
             Map.entry(ATTR_MODIFIED, Long.class),
@@ -46,8 +43,10 @@ public abstract class ObjectProcessing {
     );
 
     protected Map<String, Class> membershipColumns = Map.ofEntries(
-            Map.entry(ATTR_GR_ID_IDX, Long.class),
-            Map.entry(ATTR_SCT_ID_IDX, Long.class),
+//            Map.entry(ATTR_GR_ID_IDX, Long.class),
+//            Map.entry(ATTR_SCT_ID_IDX, Long.class),
+            Map.entry(ATTR_GR_ID_IDX, String.class),
+            Map.entry(ATTR_SCT_ID_IDX, String.class),
             Map.entry(ATTR_MODIFIED, Long.class),
             Map.entry(ATTR_DELETED, String.class)
     );
@@ -63,13 +62,13 @@ public abstract class ObjectProcessing {
 //        return buildConnectorObject(null, null, resultSet, null, columns, ob);
 //    }
 
-    protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, String uid_name,
+    protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, String uid_name, String name_name,
                                                           ResultSet resultSet, OperationOptions oo,
                                                           Map<String, Class> columns) throws SQLException {
-        return buildConnectorObject(o_class, uid_name, resultSet, oo, columns, null);
+        return buildConnectorObject(o_class, uid_name, name_name, resultSet, oo, columns, null);
     }
 
-    protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, String uid_name,
+    protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, String uid_name, String name_name,
                                                           ResultSet resultSet, OperationOptions oo,
                                                           Map<String, Class> columns, ConnectorObjectBuilder ob)
             throws SQLException {
@@ -77,6 +76,7 @@ public abstract class ObjectProcessing {
         LOG.info("Evaluation of SQL objects present in result set.");
 
         ConnectorObjectBuilder builder;
+
         if (ob != null) {
 
             builder = ob;
@@ -104,13 +104,17 @@ public abstract class ObjectProcessing {
 
             if (uid_name != null && name.equals(uid_name)) {
 
-                String nameVal = Long.toString(resultSet.getLong(i));
-                LOG.ok("Addition of UID and Name attribute {0}, the value {1}", name, nameVal);
+                String uidVal = Long.toString(resultSet.getLong(i));
+                LOG.ok("Addition of UID attribute {0}, the value {1}", uid_name, uidVal);
 
+                builder.setUid(new Uid(uidVal));
+
+            } else if (name_name != null && name.equals(name_name)) {
+
+                String nameVal = resultSet.getString(i);
+                LOG.ok("Addition of Name attribute {0}, the value {1}", name_name, nameVal);
 
                 builder.setName(nameVal);
-                builder.setUid(new Uid(nameVal));
-
             } else {
 
                 if (columns.containsKey(name)) {
@@ -119,7 +123,13 @@ public abstract class ObjectProcessing {
                     if (type.equals(Long.class)) {
 
                         LOG.ok("Addition of Long type attribute for attribute from column with name {0}", name);
-                        builder.addAttribute(name, resultSet.getLong(i));
+                        if (name.equals(ATTR_MODIFIED)) {
+
+                            builder.addAttribute(name, resultSet.getLong(i));
+                        } else {
+
+                            builder.addAttribute(name, Long.toString(resultSet.getLong(i)));
+                        }
                     }
 
                     if (type.equals(String.class)) {
@@ -140,8 +150,8 @@ public abstract class ObjectProcessing {
         return builder;
     }
 
-    protected abstract ConnectorObjectBuilder populateMembershipAttribute(String uid, ConnectorObjectBuilder ob,
-                                                                          Connection connection) throws SQLException;
+    protected abstract ConnectorObjectBuilder populateMembershipAttribute(ResultSet result, ConnectorObjectBuilder ob)
+            throws SQLException;
 
     protected Set<String> getAttributesToGet(OperationOptions operationOptions) {
         if (operationOptions != null || operationOptions.getAttributesToGet() != null) {
