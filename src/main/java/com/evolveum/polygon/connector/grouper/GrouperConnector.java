@@ -94,7 +94,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         LOG.ok("The filter(s) used for the execute query operation:{0} ", filter == null ? "Empty filter, fetching" +
                 " all objects of the object type." : filter);
         LOG.ok("Evaluating executeQuery with the following operation options: {0}", operationOptions == null ? "empty" +
-                "opertaion options." : operationOptions);
+                "operation options." : operationOptions);
 
         if (objectClass == null) {
 

@@ -43,8 +43,6 @@ public abstract class ObjectProcessing {
     );
 
     protected Map<String, Class> membershipColumns = Map.ofEntries(
-//            Map.entry(ATTR_GR_ID_IDX, Long.class),
-//            Map.entry(ATTR_SCT_ID_IDX, Long.class),
             Map.entry(ATTR_GR_ID_IDX, String.class),
             Map.entry(ATTR_SCT_ID_IDX, String.class),
             Map.entry(ATTR_MODIFIED, Long.class),
@@ -57,10 +55,6 @@ public abstract class ObjectProcessing {
     public abstract void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
             , Connection connection);
 
-//    protected ConnectorObjectBuilder buildConnectorObject(ResultSet resultSet, Map<String, Class> columns,
-//                                                          ConnectorObjectBuilder ob) throws SQLException {
-//        return buildConnectorObject(null, null, resultSet, null, columns, ob);
-//    }
 
     protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, String uid_name, String name_name,
                                                           ResultSet resultSet, OperationOptions oo,

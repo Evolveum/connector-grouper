@@ -23,7 +23,6 @@ import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
 import java.util.Map;
-import java.util.Set;
 
 public class QueryBuilder {
     private static final Log LOG = Log.getLog(QueryBuilder.class);
@@ -37,11 +36,6 @@ public class QueryBuilder {
 
     private Map<String, Map<String, String>> joinPair;
 
-
-//    public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Map<String, Class>> columns,
-//                        String selectTable, String uniqueName) {
-//        this(objectClass, filter, columns, selectTable, uniqueName,null,  null);
-//    }
 
     public QueryBuilder(ObjectClass objectClass, Filter filter, Map<String, Map<String, Class>> columns,
                         String selectTable, OperationOptions oo) {

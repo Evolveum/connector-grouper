@@ -8,9 +8,6 @@ import java.util.Map;
 public class ResourceQuery {
     private static final Log LOG = Log.getLog(ResourceQuery.class);
     private ObjectClass objectClass;
-    private String objectClassUidName;
-    private String objectClassNameName;
-    private String membershipAttr;
     private Map<String, Map<String, Class>> columnInformation;
 
     private String query = null;

@@ -23,7 +23,6 @@ import org.identityconnectors.framework.common.exceptions.ConnectionFailedExcept
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.postgresql.ds.PGConnectionPoolDataSource;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -36,7 +35,7 @@ public class GrouperConnection {
 
     public GrouperConnection(GrouperConfiguration configuration) {
         this.configuration = configuration;
-        //LOG.ok("New database connection initialized to grouper database: {}", configuration);
+
         connection = initialize(configuration);
     }
 
@@ -53,13 +52,7 @@ public class GrouperConnection {
         clientPassword.access(accessorSecret);
 
         dataSource.setPassword(accessorSecret.getClearString());
-        //serverName
-        //portNumber
-        //user
-        //password
-        //databaseName
-        //connectionTimeout?
-        //defaultRowFetchSize?
+
 
         try {
             connection = dataSource.getConnection();
