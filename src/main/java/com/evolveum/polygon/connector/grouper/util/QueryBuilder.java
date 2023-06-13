@@ -20,6 +20,7 @@ import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
+import org.identityconnectors.framework.common.objects.filter.ContainsAllValuesFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
 import java.util.Map;
@@ -29,8 +30,10 @@ public class QueryBuilder {
     private final String selectTable;
     private static final String _WHERE = "WHERE";
     private static final String _INNER = "INNER";
+    private static final String _LEFT = "LEFT";
     private static final String _JOIN = "JOIN";
     private static final String _ON = "ON";
+    private String joinStatement;
     private ResourceQuery translatedFilter;
     private Map<String, Map<String, Class>> columns;
 
@@ -55,6 +58,16 @@ public class QueryBuilder {
 
             if (filter != null) {
 
+                if (joinPair != null) {
+                    if (filter instanceof ContainsAllValuesFilter) {
+
+                        joinStatement = _INNER + " " + _JOIN;
+                    } else {
+
+                        joinStatement = _LEFT + " " + _JOIN;
+                    }
+                }
+
                 this.translatedFilter = filter.accept(new FilterHandler(),
                         new ResourceQuery(objectClass, columns));
             }
@@ -63,6 +76,7 @@ public class QueryBuilder {
         this.columns = columns;
         this.selectTable = selectTable;
         this.joinPair = joinPair;
+
     }
 
     public String build() {
@@ -85,7 +99,7 @@ public class QueryBuilder {
                     LOG.ok("Augmenting Select, joining with with table {0} on the parameter {1}.", joinTable,
                             joinParam);
 
-                    statementString = statementString + " " + _INNER + " " + _JOIN + " " + joinTable + " " + _ON + " "
+                    statementString = statementString + " " + joinStatement + " " + joinTable + " " + _ON + " "
                             + selectTable + "." + selectTableJoinParam + " " + "=" + " " + joinTable + "." + joinParam;
                 }
             }

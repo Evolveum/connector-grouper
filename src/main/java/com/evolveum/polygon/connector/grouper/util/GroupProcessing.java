@@ -65,13 +65,12 @@ public class GroupProcessing extends ObjectProcessing {
 
         //Read-only,
 
-        AttributeInfoBuilder id_index = new AttributeInfoBuilder(ATTR_ID_IDX);
-        id_index.setRequired(true).setType(Integer.class).setCreateable(false).setUpdateable(false).setReadable(true);
-        groupObjClassBuilder.addAttributeInfo(id_index.build());
-
-        AttributeInfoBuilder name = new AttributeInfoBuilder(ATTR_NAME);
-        name.setRequired(false).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true);
+        AttributeInfoBuilder name = new AttributeInfoBuilder(Name.NAME);
+        name.setRequired(false).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true).
+                setNativeName(ATTR_NAME);
         groupObjClassBuilder.addAttributeInfo(name.build());
+
+
 
         AttributeInfoBuilder display_name = new AttributeInfoBuilder(ATTR_DISPLAY_NAME);
         display_name.setRequired(false).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true);
@@ -105,11 +104,7 @@ public class GroupProcessing extends ObjectProcessing {
                 ObjectClass.GROUP_NAME);
 
         QueryBuilder queryBuilder;
-        if (!getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
-
-            queryBuilder = new QueryBuilder(O_CLASS, filter, Map.of(TABLE_GR_NAME, columns),
-                    TABLE_GR_NAME, operationOptions);
-        } else {
+        if (getAttributesToGet(operationOptions).contains(ATTR_MEMBERS) && filter != null) {
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
             tablesAndColumns.put(TABLE_GR_NAME, columns);
@@ -120,6 +115,10 @@ public class GroupProcessing extends ObjectProcessing {
 
             queryBuilder = new QueryBuilder(O_CLASS, filter,
                     tablesAndColumns, TABLE_GR_NAME, joinMap, operationOptions);
+        } else {
+
+            queryBuilder = new QueryBuilder(O_CLASS, filter, Map.of(TABLE_GR_NAME, columns),
+                    TABLE_GR_NAME, operationOptions);
         }
 
         String query = queryBuilder.build();
@@ -226,7 +225,10 @@ public class GroupProcessing extends ObjectProcessing {
                     LOG.ok("Addition of Long type attribute for attribute from column with name {0} to the multivalued" +
                             " collection", name);
 
-                    attrValues.add(Long.toString(result.getLong(i)));
+                    Long resVal = result.getLong(i);
+
+                    attrValues.add(result.wasNull() ? null : Long.toString(resVal));
+
                     multiValues.put(name, attrValues);
                 }
 

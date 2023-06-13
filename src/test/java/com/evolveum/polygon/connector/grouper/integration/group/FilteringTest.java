@@ -46,7 +46,29 @@ public class FilteringTest extends CommonTestClass {
         ArrayList<ConnectorObject> results = handler.getResult();
 
 
-        // TODO test only
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
+
+    }
+
+    @Test()
+    public void fetchAllWithAttrsToGet() {
+
+        LOG.ok("Execution of fetch all test for the Group object class");
+
+        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getResultHandler();
+
+        grouperConnector.executeQuery(ObjectClass.GROUP, null, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+
         for (ConnectorObject result : results) {
 
             LOG.info("### START ### Attribute set for the object {0}", result.getName());
@@ -71,13 +93,14 @@ public class FilteringTest extends CommonTestClass {
         ArrayList<ConnectorObject> results = handler.getResult();
 
 
-        // TODO test only
         for (ConnectorObject result : results) {
 
             LOG.info("### START ### Attribute set for the object {0}", result.getName());
             result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
                     obj.getName(), obj.getValue()));
             LOG.info("### END ###");
+
+            Assert.assertEquals(result.getUid().getUidValue(), "34");
         }
     }
 
@@ -94,14 +117,15 @@ public class FilteringTest extends CommonTestClass {
         grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
-        // TODO also fetches members?
-        // TODO test only
+
         for (ConnectorObject result : results) {
 
             LOG.info("### START ### Attribute set for the object {0}", result.getName());
             result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
                     obj.getName(), obj.getValue()));
             LOG.info("### END ###");
+
+            Assert.assertEquals(result.getUid().getUidValue(), "34");
         }
     }
 
@@ -113,13 +137,12 @@ public class FilteringTest extends CommonTestClass {
         TestSearchResultsHandler handler = getResultHandler();
 
         ContainsAllValuesFilter filter = (ContainsAllValuesFilter) FilterBuilder.containsAllValues(
-                AttributeBuilder.build(ATTR_MEMBERS,"98"));
+                AttributeBuilder.build(ATTR_MEMBERS, "98"));
 
         grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
-        // TODO also fetches members?
-        // TODO test only
+
         for (ConnectorObject result : results) {
 
             LOG.info("### START ### Attribute set for the object {0}", result.getName());

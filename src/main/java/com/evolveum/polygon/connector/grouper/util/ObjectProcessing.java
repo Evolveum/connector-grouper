@@ -29,7 +29,8 @@ import java.util.*;
 
 public abstract class ObjectProcessing {
     private static final Log LOG = Log.getLog(ObjectProcessing.class);
-    public static final String SUBJECT_NAME = ObjectClassUtil.createSpecialName("SUBJECT");
+
+public static final String SUBJECT_NAME = "Subject";
     protected static final String ATTR_MODIFIED = "last_modified";
     protected static final String TABLE_MEMBERSHIP_NAME = "gr_mp_memberships";
     protected static final String ATTR_GR_ID_IDX = "group_id_index";
@@ -117,12 +118,17 @@ public abstract class ObjectProcessing {
                     if (type.equals(Long.class)) {
 
                         LOG.ok("Addition of Long type attribute for attribute from column with name {0}", name);
+
+
+                        Long resVal = resultSet.getLong(i);
+
+
                         if (name.equals(ATTR_MODIFIED)) {
 
-                            builder.addAttribute(name, resultSet.getLong(i));
+                            builder.addAttribute(name, resultSet.wasNull() ? null : resVal);
                         } else {
 
-                            builder.addAttribute(name, Long.toString(resultSet.getLong(i)));
+                            builder.addAttribute(name, resultSet.wasNull() ? null : Long.toString(resVal));
                         }
                     }
 

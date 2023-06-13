@@ -30,7 +30,8 @@ public interface ObjectConstants {
     String ATTR_ID = "subject_id";
     String ATTR_MEMBER_OF = "member_of";
     // COMMON
-    String SUBJECT_NAME = ObjectClassUtil.createSpecialName("SUBJECT");
+    //String SUBJECT_NAME = ObjectClassUtil.createSpecialName("subject");
+    String SUBJECT_NAME = "Subject";
     String ATTR_ID_IDX = "id_index";
     String ATTR_MODIFIED = "last_modified";
     String ATTR_DELETED = "deleted";

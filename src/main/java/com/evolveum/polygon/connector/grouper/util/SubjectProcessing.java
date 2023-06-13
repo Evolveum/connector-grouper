@@ -37,8 +37,7 @@ public class SubjectProcessing extends ObjectProcessing {
     protected static final String ATTR_MEMBER_OF_NATIVE = ATTR_GR_ID_IDX;
     protected Map<String, Class> columns = new HashMap<>();
     protected Map<String, Class> suMembershipColumns = Map.ofEntries(
-            Map.entry(ATTR_GR_ID_IDX, Long.class),
-            Map.entry(ATTR_SCT_ID_IDX, Long.class)
+            Map.entry(ATTR_GR_ID_IDX, Long.class)
 
     );
 
@@ -58,10 +57,14 @@ public class SubjectProcessing extends ObjectProcessing {
         subjectObjClassBuilder.setType(SUBJECT_NAME);
 
 
+        // TODO comment up
         //Read-only,
-        AttributeInfoBuilder id = new AttributeInfoBuilder(ATTR_ID);
-        id.setRequired(true).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true);
+        AttributeInfoBuilder id = new AttributeInfoBuilder(Name.NAME);
+        id.setRequired(true).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true)
+                .setNativeName(ATTR_ID);
         subjectObjClassBuilder.addAttributeInfo(id.build());
+
+        //TODO
 
         AttributeInfoBuilder last_modified = new AttributeInfoBuilder(ATTR_MODIFIED);
         last_modified.setRequired(false).setType(Integer.class).setCreateable(false).setUpdateable(false).setReadable(true);
@@ -86,10 +89,8 @@ public class SubjectProcessing extends ObjectProcessing {
                 SUBJECT_NAME);
         QueryBuilder queryBuilder = null;
 
-        if (!getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
-            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, Map.of(TABLE_SU_NAME, columns),
-                    TABLE_SU_NAME, operationOptions);
-        } else {
+        if ((getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF) && filter != null)) {
+
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
             tablesAndColumns.put(TABLE_SU_NAME, columns);
             tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
@@ -99,6 +100,10 @@ public class SubjectProcessing extends ObjectProcessing {
 
             queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter,
                     tablesAndColumns, TABLE_SU_NAME, joinMap, operationOptions);
+        } else {
+
+            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, Map.of(TABLE_SU_NAME, columns),
+                    TABLE_SU_NAME, operationOptions);
         }
         String query = queryBuilder.build();
         ResultSet result = null;
@@ -153,6 +158,8 @@ public class SubjectProcessing extends ObjectProcessing {
     protected ConnectorObjectBuilder populateMembershipAttribute(ResultSet result,
                                                                  ConnectorObjectBuilder ob) throws SQLException {
 
+        LOG.info("Evaluating membership attribute values.");
+
         HashMap<String, Set<Object>> multiValues = new HashMap<>();
         buildMultiValued(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues);
 
@@ -205,7 +212,9 @@ public class SubjectProcessing extends ObjectProcessing {
                     LOG.ok("Addition of Long type attribute for attribute from column with name {0} to the multivalued" +
                             " collection", name);
 
-                    attrValues.add(Long.toString(result.getLong(i)));
+                    Long resVal = result.getLong(i);
+
+                    attrValues.add(result.wasNull() ? null : Long.toString(resVal));
                     multiValues.put(name, attrValues);
                 }
 

@@ -57,14 +57,14 @@
             <intent>default</intent>
             <displayName>Default Account</displayName>
             <default>true</default>
-            <objectClass>ri:__SUBJECT__</objectClass>
+            <objectClass>ri:CustomSubjectObjectClass</objectClass>
 
             <focus>
                 <type>c:UserType</type>
             </focus>
 
             <attribute>
-                <ref>icfs:name</ref>
+                <ref>ri:subject_id</ref>
                 <inbound>
                     <target>
                         <path>$user/name</path>
@@ -73,7 +73,7 @@
             </attribute>
 
             <attribute>
-                <ref>ri:subject_id</ref>
+                <ref>icfs:uid</ref>
                 <inbound>
                     <target>
                         <path>$user/employeeNumber</path>
@@ -100,11 +100,12 @@
 
                                                 def attrs = entitlement.getAttributes();
                                                 pcvi = attrs.asPrismContainerValue().getItems();
+                                                def groupName;
 
                                                 for (obj in pcvi){
                                                 if (obj.isSingleValue()){
 
-                                                if("name".equals(obj?.getElementName().toString())){
+                                                if("uid".equals(obj?.getElementName().toString())){
 
                                                 groupName = obj?.getValue()?.getRealValue()
                                                 return groupName
@@ -176,14 +177,14 @@
             <intent>group</intent>
             <displayName>Group</displayName>
             <default>true</default>
-            <objectClass>ri:__GROUP__</objectClass>
+            <objectClass>ri:GroupObjectClass</objectClass>
 
             <focus>
                 <type>c:RoleType</type>
             </focus>
 
             <attribute>
-                <ref>icfs:name</ref>
+                <ref>icfs:uid</ref>
                 <inbound>
                     <target>
                         <path>$focus/name</path>
