@@ -79,7 +79,7 @@ public class CommonTestClass implements ObjectConstants {
         List<String> subjectArray = CollectionUtil.newList(ATTR_ID);
 
         Map<String, Object> operationOptions = new HashMap<>();
-        //TODO
+
         if (ObjectClass.GROUP_NAME.equals(objectClassName)) {
             if (extendedAttrsToGet) {
 

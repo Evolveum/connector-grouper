@@ -161,8 +161,8 @@ public abstract class ObjectProcessing {
         return builder;
     }
 
-    protected abstract ConnectorObjectBuilder populateMembershipAttribute(ResultSet result, ConnectorObjectBuilder ob,
-                                                                          GrouperConfiguration configuration)
+    protected abstract ConnectorObjectBuilder populateOptionalAttributes(ResultSet result, ConnectorObjectBuilder ob,
+                                                                         GrouperConfiguration configuration)
             throws SQLException;
 
     protected Set<String> getAttributesToGet(OperationOptions operationOptions) {

@@ -107,12 +107,11 @@ public class GroupProcessing extends ObjectProcessing {
                 AttributeInfoBuilder extAttr = new AttributeInfoBuilder(attr);
                 extAttr.setRequired(false).setType(String.class).setMultiValued(false)
                         .setCreateable(false).setUpdateable(false).setReadable(true)
-                        //TODO should this be returned by default
+                        //TODO should this be returned by default ?
                         .setReturnedByDefault(false);
 
                 groupObjClassBuilder.addAttributeInfo(extAttr.build());
             }
-
         }
 
         schemaBuilder.defineObjectClass(groupObjClassBuilder.build());
@@ -125,17 +124,28 @@ public class GroupProcessing extends ObjectProcessing {
                 ObjectClass.GROUP_NAME);
 
         QueryBuilder queryBuilder;
+        List<String> extended = configuration.getExtendedGroupProperties() != null ?
+                Arrays.asList(configuration.getExtendedGroupProperties()) : null;
+
         if (getAttributesToGet(operationOptions) != null &&
-                (getAttributesToGet(operationOptions).contains(ATTR_MEMBERS) && filter != null)) {
+                (!getAttributesToGet(operationOptions).isEmpty() && filter != null)) {
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
-            tablesAndColumns.put(TABLE_GR_NAME, columns);
-            tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, grMembershipColumns);
-            tablesAndColumns.put(TABLE_GR_EXTENSION_NAME, extensionColumns);
+            Map<Map<String, String>, String> joinMap = new HashMap<>();
 
-            Map<Map<String, String>, String> joinMap = Map.of(
-                    Map.of(TABLE_MEMBERSHIP_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX,
-                    Map.of(TABLE_GR_EXTENSION_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
+            tablesAndColumns.put(TABLE_GR_NAME, columns);
+
+            if (getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
+
+                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, grMembershipColumns);
+                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (getAttributesToGet(operationOptions).stream().anyMatch(atg -> extended.contains(atg))) {
+
+                tablesAndColumns.put(TABLE_GR_EXTENSION_NAME, extensionColumns);
+                joinMap.put(Map.of(TABLE_GR_EXTENSION_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
+            }
 
             queryBuilder = new QueryBuilder(O_CLASS, filter,
                     tablesAndColumns, TABLE_GR_NAME, joinMap, operationOptions);
@@ -147,6 +157,7 @@ public class GroupProcessing extends ObjectProcessing {
 
         String query = queryBuilder.build();
         ResultSet result = null;
+
         LOG.info("Query about to be executed: {0}", query);
         try {
 
@@ -168,11 +179,10 @@ public class GroupProcessing extends ObjectProcessing {
                         co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_NAME, result, operationOptions,
                                 columns);
 
-                        // TODO
                         if (getAttributesToGet(operationOptions) != null &&
-                                getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
+                                !getAttributesToGet(operationOptions).isEmpty()) {
 
-                            populateMembershipAttribute(result, co, configuration);
+                            populateOptionalAttributes(result, co, configuration);
                         }
                         handler.handle(co.build());
                         break;
@@ -199,17 +209,17 @@ public class GroupProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected ConnectorObjectBuilder populateMembershipAttribute(ResultSet result, ConnectorObjectBuilder ob,
-                                                                 GrouperConfiguration configuration)
+    protected ConnectorObjectBuilder populateOptionalAttributes(ResultSet result, ConnectorObjectBuilder ob,
+                                                                GrouperConfiguration configuration)
             throws SQLException {
 
         HashMap<String, Set<Object>> multiValues = new HashMap<>();
 
-        buildMultiValued(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues,
+        buildOptional(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues,
                 configuration);
         while (result.next()) {
 
-            buildMultiValued(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues,
+            buildOptional(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues,
                     configuration);
         }
 
@@ -228,8 +238,8 @@ public class GroupProcessing extends ObjectProcessing {
         return ob;
     }
 
-    private void buildMultiValued(ResultSet result, Map<String, Class> columns,
-                                  HashMap<String, Set<Object>> multiValues, GrouperConfiguration configuration)
+    private void buildOptional(ResultSet result, Map<String, Class> columns,
+                               HashMap<String, Set<Object>> multiValues, GrouperConfiguration configuration)
             throws SQLException {
 
         LOG.info("Evaluation of SQL objects present in result set for multivalued attributes.");
@@ -354,9 +364,6 @@ public class GroupProcessing extends ObjectProcessing {
                     LOG.ok("Extension attribute name which is being added to extended resource schema: {0}", nameValue);
                     extensionAttributeNames.add(result.getString(i));
                 }
-
-                //TODO
-                LOG.ok("# Column name {0}", name);
             }
 
         }

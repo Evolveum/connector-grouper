@@ -17,7 +17,6 @@
 package com.evolveum.polygon.connector.grouper.util;
 
 import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
-import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
@@ -69,7 +68,6 @@ public class SubjectProcessing extends ObjectProcessing {
                 .setNativeName(ATTR_ID);
         subjectObjClassBuilder.addAttributeInfo(id.build());
 
-        //TODO
 
         AttributeInfoBuilder last_modified = new AttributeInfoBuilder(ATTR_MODIFIED);
         last_modified.setRequired(false).setType(Integer.class).setCreateable(false).setUpdateable(false).setReadable(true);
@@ -111,18 +109,29 @@ public class SubjectProcessing extends ObjectProcessing {
                 SUBJECT_NAME);
         QueryBuilder queryBuilder = null;
 
+        List<String> extended = configuration.getExtendedSubjectProperties() !=null ?
+                Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
+
         if (getAttributesToGet(operationOptions) != null &&
-                (getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF) && filter != null)) {
+                (!getAttributesToGet(operationOptions).isEmpty() && filter != null)) {
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
-            tablesAndColumns.put(TABLE_SU_NAME, columns);
-            tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
-            tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, extensionColumns);
+            Map<Map<String, String>, String> joinMap = new HashMap<>();
 
-            Map<Map<String, String>, String> joinMap = Map.of(
-                    Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX,
-                    //TODO change key value parameter
-                    Map.of(TABLE_SU_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            tablesAndColumns.put(TABLE_SU_NAME, columns);
+
+            if (getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
+
+                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
+                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (getAttributesToGet(operationOptions).stream().anyMatch(atg -> extended.contains(atg))){
+
+                tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, extensionColumns);
+                joinMap.put(Map.of(TABLE_SU_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            }
+
 
             queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter,
                     tablesAndColumns, TABLE_SU_NAME, joinMap, operationOptions);
@@ -154,12 +163,10 @@ public class SubjectProcessing extends ObjectProcessing {
                         co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_ID, result, operationOptions,
                                 columns);
 
-                        // TODO
-                        LOG.ok("MEM ATTR PROCESSING");
                         if (getAttributesToGet(operationOptions) != null &&
-                                getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
+                                !getAttributesToGet(operationOptions).isEmpty()) {
 
-                            populateMembershipAttribute(result, co, configuration);
+                            populateOptionalAttributes(result, co, configuration);
                         }
 
                         handler.handle(co.build());
@@ -187,20 +194,20 @@ public class SubjectProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected ConnectorObjectBuilder populateMembershipAttribute(ResultSet result,
-                                                                 ConnectorObjectBuilder ob,
-                                                                 GrouperConfiguration configuration)
+    protected ConnectorObjectBuilder populateOptionalAttributes(ResultSet result,
+                                                                ConnectorObjectBuilder ob,
+                                                                GrouperConfiguration configuration)
             throws SQLException {
 
         LOG.info("Evaluating membership attribute values.");
 
         HashMap<String, Set<Object>> multiValues = new HashMap<>();
 
-        buildMultiValued(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
+        buildOptional(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
 
         while (result.next()) {
 
-            buildMultiValued(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
+            buildOptional(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
         }
 
         for (String attrName : multiValues.keySet()) {
@@ -219,9 +226,8 @@ public class SubjectProcessing extends ObjectProcessing {
 
     }
 
-    // TODO pull to parent
-    private void buildMultiValued(ResultSet result, Map<String, Class> columns,
-                                  HashMap<String, Set<Object>> multiValues, GrouperConfiguration configuration)
+    private void buildOptional(ResultSet result, Map<String, Class> columns,
+                               HashMap<String, Set<Object>> multiValues, GrouperConfiguration configuration)
             throws SQLException {
 
         LOG.info("Evaluation of SQL objects present in result set for multivalued attributes.");
@@ -231,10 +237,8 @@ public class SubjectProcessing extends ObjectProcessing {
         String extAttrName = null;
         String etxAttrValue = null;
 
-//        String[] groupImProperties = configuration.getExtendedGroupProperties();
         String[] subjectImProperties = configuration.getExtendedSubjectProperties();
 
-//        List<String> extGroupProperties = null;
         List<String> extSubjectProperties = null;
 
 
@@ -349,11 +353,7 @@ public class SubjectProcessing extends ObjectProcessing {
                     LOG.ok("Extension attribute name which is being added to extended resource schema: {0}", nameValue);
                     extensionAttributeNames.add(result.getString(i));
                 }
-
-                //TODO
-                LOG.ok("# Column name {0}", name);
             }
-
         }
 
         return extensionAttributeNames;
