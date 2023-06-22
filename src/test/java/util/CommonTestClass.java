@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.evolveum.polygon.connector.grouper.integration.util;
+package util;
 
 import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
 import com.evolveum.polygon.connector.grouper.GrouperConnector;
@@ -28,8 +28,7 @@ import java.util.*;
 
 public class CommonTestClass implements ObjectConstants {
 
-    private final PropertiesParser parser = new PropertiesParser();
-    ;
+    protected final PropertiesParser parser = new PropertiesParser();
     protected GrouperConfiguration grouperConfiguration = new GrouperConfiguration();
     protected GrouperConnector grouperConnector = new GrouperConnector();
 
@@ -49,6 +48,14 @@ public class CommonTestClass implements ObjectConstants {
 
         if (parser.getValidTimeout() != null) {
             grouperConfiguration.setConnectionValidTimeout(parser.getValidTimeout());
+        }
+
+        if (parser.getGroupProperties() != null) {
+            grouperConfiguration.setExtendedGroupProperties(parser.getGroupProperties().toArray(new String [0]));
+        }
+
+        if (parser.getSubjectProperties() != null) {
+            grouperConfiguration.setExtendedSubjectProperties(parser.getSubjectProperties().toArray(new String [0]));
         }
 
         grouperConfiguration.validate();

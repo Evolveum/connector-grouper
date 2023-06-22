@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.evolveum.polygon.connector.grouper.integration.sanity;
+package sanity;
 
-import com.evolveum.polygon.connector.grouper.GrouperConnector;
-import com.evolveum.polygon.connector.grouper.integration.util.CommonTestClass;
+import util.CommonTestClass;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConfigurationException;
 import org.identityconnectors.framework.common.exceptions.ConnectionFailedException;

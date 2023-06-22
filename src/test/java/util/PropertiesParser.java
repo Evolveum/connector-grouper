@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package com.evolveum.polygon.connector.grouper.integration.util;
+package util;
 
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 public class PropertiesParser {
 
@@ -36,7 +39,8 @@ public class PropertiesParser {
     private static final String _PASSWORD = "password";
     private static final String _DATABASE = "databaseName";
     private static final String _VALID_TIMEOUT = "connectionValidTimeout";
-
+    private static final String _EXTENDED_PROPERTIES_SUBJECT = "extendedSubjectProperties";
+    private static final String _EXTENDED_PROPERTIES_GROUP = "extendedGroupProperties";
 
     public PropertiesParser() {
 
@@ -71,6 +75,13 @@ public class PropertiesParser {
         return (String) PROPERTIES.get(_DATABASE);
     }
 
+    public Set<String> getSubjectProperties() {
+        return getValues(_EXTENDED_PROPERTIES_SUBJECT);
+    }
+    public Set<String> getGroupProperties() {
+        return getValues(_EXTENDED_PROPERTIES_GROUP);
+    }
+
     public Integer getValidTimeout() {
         String timeout = (String) PROPERTIES.get(_VALID_TIMEOUT);
 
@@ -82,14 +93,15 @@ public class PropertiesParser {
         return Integer.parseInt(timeout);
     }
 
-//
-//    private Set<String> getValues(String name) {
-//        Set<String> values = new HashSet<>();
-//        if (PROPERTIES.containsKey(name)) {
-//            String value = (String) PROPERTIES.get(name);
-//            values.addAll(Arrays.asList(value.split(",")));
-//        }
-//        return values;
-//    }
+    private Set<String> getValues(String name) {
+        Set<String> values = new HashSet<>();
+
+        if (PROPERTIES.containsKey(name)) {
+            String value = (String) PROPERTIES.get(name);
+            values.addAll(Arrays.asList(value.split(",")));
+        }
+
+        return values;
+    }
 
 }

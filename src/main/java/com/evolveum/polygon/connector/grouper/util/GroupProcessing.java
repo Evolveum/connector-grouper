@@ -16,6 +16,7 @@
 
 package com.evolveum.polygon.connector.grouper.util;
 
+import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
@@ -31,6 +32,7 @@ public class GroupProcessing extends ObjectProcessing {
     private static final String ATTR_DESCRIPTION = "description";
     private static final String ATTR_ID_IDX = "id_index";
     private static final String TABLE_GR_NAME = "gr_mp_groups";
+    private static final String TABLE_GR_EXTENSION_NAME = "gr_mp_group_attributes";
     protected static final String ATTR_UID = ATTR_ID_IDX;
     protected static final String ATTR_NAME = "group_name";
     protected static final String ATTR_MEMBERS = "members";
@@ -43,18 +45,20 @@ public class GroupProcessing extends ObjectProcessing {
             Map.entry(ATTR_SCT_ID_IDX, Long.class)
     );
 
-    public GroupProcessing() {
+    public GroupProcessing(GrouperConfiguration configuration) {
+
+        super(configuration);
+
         columns.put(ATTR_NAME, String.class);
         columns.put(ATTR_DISPLAY_NAME, String.class);
         columns.put(ATTR_DESCRIPTION, String.class);
         columns.put(ATTR_ID_IDX, Long.class);
 
         this.columns.putAll(objectColumns);
-
     }
 
     @Override
-    public void buildObjectClass(SchemaBuilder schemaBuilder) {
+    public void buildObjectClass(SchemaBuilder schemaBuilder, GrouperConfiguration configuration) {
         LOG.info("Building object class definition for {0}", ObjectClass.GROUP_NAME);
 
         ObjectClassInfoBuilder groupObjClassBuilder = new ObjectClassInfoBuilder();
@@ -69,7 +73,6 @@ public class GroupProcessing extends ObjectProcessing {
         name.setRequired(false).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true).
                 setNativeName(ATTR_NAME);
         groupObjClassBuilder.addAttributeInfo(name.build());
-
 
 
         AttributeInfoBuilder display_name = new AttributeInfoBuilder(ATTR_DISPLAY_NAME);
@@ -94,6 +97,24 @@ public class GroupProcessing extends ObjectProcessing {
                 .setReturnedByDefault(false);
         groupObjClassBuilder.addAttributeInfo(members.build());
 
+        String[] extendedAttrs = configuration.getExtendedGroupProperties();
+
+        if (extendedAttrs != null) {
+
+            List<String> extensionAttrs = Arrays.asList(extendedAttrs);
+            for (String attr : extensionAttrs) {
+
+                AttributeInfoBuilder extAttr = new AttributeInfoBuilder(attr);
+                extAttr.setRequired(false).setType(String.class).setMultiValued(false)
+                        .setCreateable(false).setUpdateable(false).setReadable(true)
+                        //TODO should this be returned by default
+                        .setReturnedByDefault(false);
+
+                groupObjClassBuilder.addAttributeInfo(extAttr.build());
+            }
+
+        }
+
         schemaBuilder.defineObjectClass(groupObjClassBuilder.build());
     }
 
@@ -104,14 +125,17 @@ public class GroupProcessing extends ObjectProcessing {
                 ObjectClass.GROUP_NAME);
 
         QueryBuilder queryBuilder;
-        if (getAttributesToGet(operationOptions).contains(ATTR_MEMBERS) && filter != null) {
+        if (getAttributesToGet(operationOptions) != null &&
+                (getAttributesToGet(operationOptions).contains(ATTR_MEMBERS) && filter != null)) {
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
             tablesAndColumns.put(TABLE_GR_NAME, columns);
             tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, grMembershipColumns);
+            tablesAndColumns.put(TABLE_GR_EXTENSION_NAME, extensionColumns);
 
-            Map<String, Map<String, String>> joinMap = Map.of(ATTR_ID_IDX,
-                    Map.of(TABLE_MEMBERSHIP_NAME, ATTR_GR_ID_IDX));
+            Map<Map<String, String>, String> joinMap = Map.of(
+                    Map.of(TABLE_MEMBERSHIP_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX,
+                    Map.of(TABLE_GR_EXTENSION_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
 
             queryBuilder = new QueryBuilder(O_CLASS, filter,
                     tablesAndColumns, TABLE_GR_NAME, joinMap, operationOptions);
@@ -139,13 +163,17 @@ public class GroupProcessing extends ObjectProcessing {
                     LOG.ok("Processing Equals Query");
                     final EqualsFilter equalsFilter = (EqualsFilter) filter;
                     Attribute fAttr = equalsFilter.getAttribute();
-                    if (Uid.NAME.equals(fAttr.getName()) &&
-                            getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
+                    if (Uid.NAME.equals(fAttr.getName())) {
 
                         co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_NAME, result, operationOptions,
                                 columns);
 
-                        populateMembershipAttribute(result, co);
+                        // TODO
+                        if (getAttributesToGet(operationOptions) != null &&
+                                getAttributesToGet(operationOptions).contains(ATTR_MEMBERS)) {
+
+                            populateMembershipAttribute(result, co, configuration);
+                        }
                         handler.handle(co.build());
                         break;
 
@@ -171,16 +199,18 @@ public class GroupProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected ConnectorObjectBuilder populateMembershipAttribute(ResultSet result, ConnectorObjectBuilder ob)
+    protected ConnectorObjectBuilder populateMembershipAttribute(ResultSet result, ConnectorObjectBuilder ob,
+                                                                 GrouperConfiguration configuration)
             throws SQLException {
 
         HashMap<String, Set<Object>> multiValues = new HashMap<>();
 
-        buildMultiValued(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues);
+        buildMultiValued(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues,
+                configuration);
         while (result.next()) {
 
-            buildMultiValued(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues);
-            ;
+            buildMultiValued(result, Collections.singletonMap(ATTR_SCT_ID_IDX, String.class), multiValues,
+                    configuration);
         }
 
         for (String attrName : multiValues.keySet()) {
@@ -189,18 +219,34 @@ public class GroupProcessing extends ObjectProcessing {
             if (ATTR_SCT_ID_IDX.equals(attrName)) {
 
                 ob.addAttribute(ATTR_MEMBERS, multiValues.get(attrName));
+            } else {
+
+                ob.addAttribute(attrName, multiValues.get(attrName));
             }
         }
 
         return ob;
     }
 
-    private void buildMultiValued(ResultSet result, Map<String, Class> columns, HashMap<String, Set<Object>> multiValues)
+    private void buildMultiValued(ResultSet result, Map<String, Class> columns,
+                                  HashMap<String, Set<Object>> multiValues, GrouperConfiguration configuration)
             throws SQLException {
 
         LOG.info("Evaluation of SQL objects present in result set for multivalued attributes.");
 
         ResultSetMetaData meta = result.getMetaData();
+
+        String extAttrName = null;
+        String etxAttrValue = null;
+
+        String[] groupImProperties = configuration.getExtendedGroupProperties();
+
+        List<String> extGroupProperties = null;
+
+        if (groupImProperties != null && groupImProperties.length > 0) {
+
+            extGroupProperties = List.of(groupImProperties);
+        }
 
         int count = meta.getColumnCount();
         LOG.ok("Number of columns returned from result set object: {0}", count);
@@ -228,7 +274,6 @@ public class GroupProcessing extends ObjectProcessing {
                     Long resVal = result.getLong(i);
 
                     attrValues.add(result.wasNull() ? null : Long.toString(resVal));
-
                     multiValues.put(name, attrValues);
                 }
 
@@ -243,10 +288,79 @@ public class GroupProcessing extends ObjectProcessing {
 
             } else {
 
-                LOG.info("SQL object handling discovered during multivalued attribute evaluation a column which is not" +
-                        " present in the original schema set. The column name: {0}", name);
+                if (ATTR_EXT_NAME.equals(name)) {
+
+                    extAttrName = result.getString(i);
+                    LOG.ok("Processing ext attr name: {0}", extAttrName);
+                } else if (ATTR_EXT_VALUE.equals(name)) {
+
+                    etxAttrValue = result.getString(i);
+                    LOG.ok("Processing ext attr val: {0}", etxAttrValue);
+                } else {
+
+                    LOG.info("SQL object handling discovered during multivalued attribute evaluation a " +
+                            "column which is not present in the original schema set. The column name: {0}", name);
+                }
             }
         }
 
+        LOG.ok("Not present in TYPE map: {0}", extAttrName);
+
+        if (extGroupProperties != null) {
+
+            if (extAttrName != null && extGroupProperties.contains(extAttrName)) {
+
+                Set<Object> extSet = new HashSet<>();
+                extSet.add(etxAttrValue);
+                multiValues.put(extAttrName, extSet);
+            } else {
+
+                if (extAttrName != null) {
+                } else {
+
+                    LOG.info("Attribute with the name: {0}, not present in the resource schema.", extAttrName);
+                }
+            }
+        }
+
+    }
+
+    public Set<String> fetchExtensionSchema(Connection connection) throws SQLException {
+
+        ResultSet result = null;
+        QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, TABLE_GR_EXTENSION_NAME, 1000);
+        String query = queryBuilder.build();
+
+        PreparedStatement prepareStatement = connection.prepareStatement(query);
+        result = prepareStatement.executeQuery();
+
+
+        Set<String> extensionAttributeNames = new HashSet<>();
+        while (result.next()) {
+
+
+            ResultSetMetaData meta = result.getMetaData();
+
+            int count = meta.getColumnCount();
+            LOG.ok("Number of columns returned from result set object: {0}", count);
+            // options
+
+            for (int i = 1; i <= count; i++) {
+                String name = meta.getColumnName(i);
+
+                if (ATTR_EXT_NAME.equals(name)) {
+                    String nameValue = result.getString(i);
+
+                    LOG.ok("Extension attribute name which is being added to extended resource schema: {0}", nameValue);
+                    extensionAttributeNames.add(result.getString(i));
+                }
+
+                //TODO
+                LOG.ok("# Column name {0}", name);
+            }
+
+        }
+
+        return extensionAttributeNames;
     }
 }

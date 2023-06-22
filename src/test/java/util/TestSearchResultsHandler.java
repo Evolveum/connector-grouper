@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.evolveum.polygon.connector.grouper.integration.util;
+package util;
 
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.ConnectorObject;

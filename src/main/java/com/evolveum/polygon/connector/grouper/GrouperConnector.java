@@ -19,24 +19,27 @@ package com.evolveum.polygon.connector.grouper;
 import com.evolveum.polygon.connector.grouper.util.*;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
-import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.OperationOptions;
-import org.identityconnectors.framework.common.objects.ResultsHandler;
-import org.identityconnectors.framework.common.objects.Schema;
+import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
 import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.Connector;
 import org.identityconnectors.framework.spi.ConnectorClass;
+import org.identityconnectors.framework.spi.operations.DiscoverConfigurationOp;
 import org.identityconnectors.framework.spi.operations.SchemaOp;
 import org.identityconnectors.framework.spi.operations.SearchOp;
 import org.identityconnectors.framework.spi.operations.TestOp;
 
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @ConnectorClass(displayNameKey = "grouper.connector.display", configurationClass = GrouperConfiguration.class)
-public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter> {
+public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp {
 
     private static final Log LOG = Log.getLog(GrouperConnector.class);
 
@@ -70,7 +73,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         LOG.info("Evaluating the schema operation");
         SchemaTranslator translator = new SchemaTranslator();
 
-        return translator.generateSchema();
+        return translator.generateSchema(configuration);
 
     }
 
@@ -108,7 +111,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
 
         if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
-            SubjectProcessing subjectProcessing = new SubjectProcessing();
+            SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
 
             LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
 
@@ -117,7 +120,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         }
 
         if (objectClass.is(ObjectClass.GROUP_NAME)) {
-            GroupProcessing groupProcessing = new GroupProcessing();
+            GroupProcessing groupProcessing = new GroupProcessing(configuration);
 
             LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
 
@@ -135,5 +138,72 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         connection.dispose();
 
         LOG.ok("Test OK");
+    }
+
+    @Override
+    public void testPartialConfiguration() {
+
+    }
+
+    @Override
+    public Map<String, SuggestedValues> discoverConfiguration() {
+        Map<String, SuggestedValues> suggestions = new HashMap<>();
+
+        Integer connectionValidTimeout = configuration.getConnectionValidTimeout();
+
+        if (connectionValidTimeout != null) {
+
+            suggestions.put("connectionValidTimeout", SuggestedValuesBuilder.buildOpen(connectionValidTimeout));
+        } else {
+
+            // Default for connectionValidTimeout
+            suggestions.put("timeout", SuggestedValuesBuilder.buildOpen("10"));
+        }
+
+        suggestions.put("extendedGroupProperties", SuggestedValuesBuilder.buildOpen(
+                fetchExtensionAttributes(ObjectClass.GROUP) != null ?
+                        fetchExtensionAttributes(ObjectClass.GROUP).toArray(new String[0]) : null
+        ));
+
+        suggestions.put("extendedSubjectProperties", SuggestedValuesBuilder.buildOpen(
+                fetchExtensionAttributes(SubjectProcessing.O_CLASS) != null ?
+                        fetchExtensionAttributes(SubjectProcessing.O_CLASS).toArray(new String[0]) : null
+        ));
+
+        return suggestions;
+    }
+
+    private Set<String> fetchExtensionAttributes(ObjectClass oClass) {
+        LOG.info("Fetching extension attributes for the object class {0}", oClass);
+
+        if (oClass.equals(ObjectClass.GROUP)) {
+
+            GroupProcessing processing = new GroupProcessing(configuration);
+
+            try {
+                return processing.fetchExtensionSchema(connection.getConnection());
+
+            } catch (SQLException e) {
+                // TODO
+                throw new RuntimeException(e);
+            }
+
+        } else if (oClass.equals(SubjectProcessing.O_CLASS)) {
+
+            SubjectProcessing processing = new SubjectProcessing(configuration);
+
+            try {
+                return processing.fetchExtensionSchema(connection.getConnection());
+
+            } catch (SQLException e) {
+                // TODO
+                throw new RuntimeException(e);
+            }
+
+        } else {
+
+            throw new ConnectorException("Unexpected object class used in extension attribute evaluation.");
+        }
+
     }
 }

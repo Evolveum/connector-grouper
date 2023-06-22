@@ -16,9 +16,8 @@
 
 package com.evolveum.polygon.connector.grouper.integration.group;
 
-import com.evolveum.polygon.connector.grouper.integration.util.CommonTestClass;
-import com.evolveum.polygon.connector.grouper.integration.util.TestSearchResultsHandler;
-import com.evolveum.polygon.connector.grouper.util.GroupProcessing;
+import util.CommonTestClass;
+import util.TestSearchResultsHandler;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.ContainsAllValuesFilter;
@@ -112,7 +111,7 @@ public class FilteringTest extends CommonTestClass {
         TestSearchResultsHandler handler = getResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
-                "34"));
+                "45"));
 
         grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
@@ -125,7 +124,7 @@ public class FilteringTest extends CommonTestClass {
                     obj.getName(), obj.getValue()));
             LOG.info("### END ###");
 
-            Assert.assertEquals(result.getUid().getUidValue(), "34");
+            Assert.assertEquals(result.getUid().getUidValue(), "45");
         }
     }
 

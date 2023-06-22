@@ -16,6 +16,7 @@
 
 package com.evolveum.polygon.connector.grouper.util;
 
+import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
@@ -30,17 +31,24 @@ import java.util.*;
 public abstract class ObjectProcessing {
     private static final Log LOG = Log.getLog(ObjectProcessing.class);
 
-public static final String SUBJECT_NAME = "Subject";
+    public static final String SUBJECT_NAME = "Subject";
     protected static final String ATTR_MODIFIED = "last_modified";
     protected static final String TABLE_MEMBERSHIP_NAME = "gr_mp_memberships";
     protected static final String ATTR_GR_ID_IDX = "group_id_index";
     protected static final String ATTR_SCT_ID_IDX = "subject_id_index";
-
+    protected static final String ATTR_EXT_NAME = "attribute_name";
+    protected static final String ATTR_EXT_VALUE = "attribute_value";
     protected static final String ATTR_DELETED = "deleted";
+    protected GrouperConfiguration configuration;
 
     protected Map<String, Class> objectColumns = Map.ofEntries(
             Map.entry(ATTR_MODIFIED, Long.class),
             Map.entry(ATTR_DELETED, String.class)
+    );
+
+    protected Map<String, Class> extensionColumns = Map.ofEntries(
+            Map.entry(ATTR_EXT_NAME, String.class),
+            Map.entry(ATTR_EXT_VALUE, String.class)
     );
 
     protected Map<String, Class> membershipColumns = Map.ofEntries(
@@ -50,8 +58,11 @@ public static final String SUBJECT_NAME = "Subject";
             Map.entry(ATTR_DELETED, String.class)
     );
 
+    public ObjectProcessing(GrouperConfiguration configuration){
 
-    public abstract void buildObjectClass(SchemaBuilder schemaBuilder);
+        this.configuration = configuration;
+    }
+    public abstract void buildObjectClass(SchemaBuilder schemaBuilder, GrouperConfiguration configuration);
 
     public abstract void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
             , Connection connection);
@@ -150,11 +161,12 @@ public static final String SUBJECT_NAME = "Subject";
         return builder;
     }
 
-    protected abstract ConnectorObjectBuilder populateMembershipAttribute(ResultSet result, ConnectorObjectBuilder ob)
+    protected abstract ConnectorObjectBuilder populateMembershipAttribute(ResultSet result, ConnectorObjectBuilder ob,
+                                                                          GrouperConfiguration configuration)
             throws SQLException;
 
     protected Set<String> getAttributesToGet(OperationOptions operationOptions) {
-        if (operationOptions != null || operationOptions.getAttributesToGet() != null) {
+        if (operationOptions != null && operationOptions.getAttributesToGet() != null) {
 
             return new HashSet<>(Arrays.asList(operationOptions.getAttributesToGet()));
         }

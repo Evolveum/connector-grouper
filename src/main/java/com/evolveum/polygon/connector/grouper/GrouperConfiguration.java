@@ -35,7 +35,8 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private String userName;
     private String port;
     private String host;
-
+    private String[] extendedGroupProperties = {};
+    private String[] extendedSubjectProperties = {};
 
     @Override
     public void validate() {
@@ -161,6 +162,28 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.connectionValidTimeout = connectionValidTimeout;
     }
 
+    @ConfigurationProperty(order = 8, displayMessageKey = "extendedGroupProperties.display",
+            helpMessageKey = "extendedGroupProperties.help")
+
+    public String[] getExtendedGroupProperties() {
+        return extendedGroupProperties;
+    }
+
+    public void setExtendedGroupProperties(String[] extendedGroupProperties) {
+        this.extendedGroupProperties = extendedGroupProperties;
+    }
+
+    @ConfigurationProperty(order = 9, displayMessageKey = "extendedSubjectProperties.display",
+            helpMessageKey = "extendedSubjectProperties.help")
+
+    public String[] getExtendedSubjectProperties() {
+        return extendedSubjectProperties;
+    }
+
+    public void setExtendedSubjectProperties(String[] extendedSubjectProperties) {
+        this.extendedSubjectProperties = extendedSubjectProperties;
+    }
+
     @Override
     public void release() {
 
@@ -170,5 +193,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         userName = null;
         port = null;
         host = null;
+        extendedSubjectProperties = null;
+        extendedGroupProperties = null;
     }
 }
