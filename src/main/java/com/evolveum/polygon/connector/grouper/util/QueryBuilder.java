@@ -123,7 +123,7 @@ public class QueryBuilder {
 
         if (translatedFilter != null) {
 
-            statementString = statementString + " " + _WHERE + " " + translatedFilter.getQuery();
+            statementString = statementString + " " + _WHERE + " " + translatedFilter.getCurrentQuerySnippet();
         }
 
         if (limit != null) {

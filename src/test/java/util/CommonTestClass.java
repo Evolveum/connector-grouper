@@ -51,21 +51,27 @@ public class CommonTestClass implements ObjectConstants {
         }
 
         if (parser.getGroupProperties() != null) {
-            grouperConfiguration.setExtendedGroupProperties(parser.getGroupProperties().toArray(new String [0]));
+            grouperConfiguration.setExtendedGroupProperties(parser.getGroupProperties().toArray(new String[0]));
         }
 
         if (parser.getSubjectProperties() != null) {
-            grouperConfiguration.setExtendedSubjectProperties(parser.getSubjectProperties().toArray(new String [0]));
+            grouperConfiguration.setExtendedSubjectProperties(parser.getSubjectProperties().toArray(new String[0]));
         }
 
         grouperConfiguration.validate();
         return grouperConfiguration;
     }
 
-    protected TestSearchResultsHandler getResultHandler() {
+    protected TestSearchResultsHandler getSearchResultHandler() {
 
         return new TestSearchResultsHandler();
     }
+
+    protected TestSearchResultsHandler getSyncResultHandler() {
+
+        return new TestSyncResultsHandler();
+    }
+
 
     protected OperationOptions getDefaultOperationOptions(String objectClassName) {
 
@@ -84,16 +90,33 @@ public class CommonTestClass implements ObjectConstants {
             if (extendedAttrsToGet) {
 
                 groupArray.add(ATTR_MEMBERS);
+
+
+                if (grouperConfiguration.getExtendedGroupProperties() != null) {
+
+                    groupArray.addAll(Arrays.asList(grouperConfiguration.getExtendedGroupProperties()));
+                }
+
             }
 
             operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, groupArray.toArray(new String[0]));
+
         } else {
             if (extendedAttrsToGet) {
+
                 subjectArray.add(ATTR_MEMBER_OF);
+
+                if (grouperConfiguration.getExtendedSubjectProperties() != null) {
+
+                    subjectArray.addAll(Arrays.asList(grouperConfiguration.getExtendedSubjectProperties()));
+                }
             }
 
             operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, subjectArray.toArray(new String[0]));
+
         }
+
+
         OperationOptions options = new OperationOptions(operationOptions);
 
         return options;

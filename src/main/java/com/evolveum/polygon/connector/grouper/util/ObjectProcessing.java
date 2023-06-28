@@ -48,7 +48,9 @@ public abstract class ObjectProcessing {
 
     protected Map<String, Class> extensionColumns = Map.ofEntries(
             Map.entry(ATTR_EXT_NAME, String.class),
-            Map.entry(ATTR_EXT_VALUE, String.class)
+            Map.entry(ATTR_EXT_VALUE, String.class),
+            //TODO test
+            Map.entry(ATTR_MODIFIED, Long.class)
     );
 
     protected Map<String, Class> membershipColumns = Map.ofEntries(
@@ -173,4 +175,7 @@ public abstract class ObjectProcessing {
 
         return null;
     }
+
+    protected abstract void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler,
+                                 OperationOptions operationOptions);
 }

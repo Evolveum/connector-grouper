@@ -37,7 +37,7 @@ public class FilteringTest extends CommonTestClass {
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
         grouperConnector.init(grouperConfiguration);
-        TestSearchResultsHandler handler = getResultHandler();
+        TestSearchResultsHandler handler = getSearchResultHandler();
 
         grouperConnector.executeQuery(objectClassSubject, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
@@ -59,7 +59,7 @@ public class FilteringTest extends CommonTestClass {
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
         grouperConnector.init(grouperConfiguration);
-        TestSearchResultsHandler handler = getResultHandler();
+        TestSearchResultsHandler handler = getSearchResultHandler();
 
         grouperConnector.executeQuery(objectClassSubject, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
@@ -80,7 +80,7 @@ public class FilteringTest extends CommonTestClass {
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
         grouperConnector.init(grouperConfiguration);
-        TestSearchResultsHandler handler = getResultHandler();
+        TestSearchResultsHandler handler = getSearchResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
                 "82"));
@@ -106,7 +106,7 @@ public class FilteringTest extends CommonTestClass {
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME,
                 true);
         grouperConnector.init(grouperConfiguration);
-        TestSearchResultsHandler handler = getResultHandler();
+        TestSearchResultsHandler handler = getSearchResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
                 "98"));
@@ -130,7 +130,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
         grouperConnector.init(grouperConfiguration);
-        TestSearchResultsHandler handler = getResultHandler();
+        TestSearchResultsHandler handler = getSearchResultHandler();
 
         ContainsAllValuesFilter filter = (ContainsAllValuesFilter) FilterBuilder.containsAllValues(
                 AttributeBuilder.build(ATTR_MEMBER_OF, "34"));

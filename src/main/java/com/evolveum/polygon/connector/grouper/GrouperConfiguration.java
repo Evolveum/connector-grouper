@@ -184,6 +184,8 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.extendedSubjectProperties = extendedSubjectProperties;
     }
 
+    /// TODO config property to specify dynamic schema scan pool
+
     @Override
     public void release() {
 

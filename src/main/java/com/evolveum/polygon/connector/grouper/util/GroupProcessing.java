@@ -238,6 +238,11 @@ public class GroupProcessing extends ObjectProcessing {
         return ob;
     }
 
+    @Override
+    public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions) {
+
+    }
+
     private void buildOptional(ResultSet result, Map<String, Class> columns,
                                HashMap<String, Set<Object>> multiValues, GrouperConfiguration configuration)
             throws SQLException {

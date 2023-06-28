@@ -19,8 +19,7 @@ package com.evolveum.polygon.connector.grouper.util;
 import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
-import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
-import org.identityconnectors.framework.common.objects.filter.Filter;
+import org.identityconnectors.framework.common.objects.filter.*;
 
 import java.sql.*;
 import java.util.*;
@@ -39,7 +38,9 @@ public class SubjectProcessing extends ObjectProcessing {
     protected static final String ATTR_MEMBER_OF_NATIVE = ATTR_GR_ID_IDX;
     protected Map<String, Class> columns = new HashMap<>();
     protected Map<String, Class> suMembershipColumns = Map.ofEntries(
-            Map.entry(ATTR_GR_ID_IDX, Long.class)
+            Map.entry(ATTR_GR_ID_IDX, Long.class),
+            //TODO test
+            Map.entry(ATTR_MODIFIED, Long.class)
 
     );
 
@@ -109,7 +110,7 @@ public class SubjectProcessing extends ObjectProcessing {
                 SUBJECT_NAME);
         QueryBuilder queryBuilder = null;
 
-        List<String> extended = configuration.getExtendedSubjectProperties() !=null ?
+        List<String> extended = configuration.getExtendedSubjectProperties() != null ?
                 Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
 
         if (getAttributesToGet(operationOptions) != null &&
@@ -126,7 +127,7 @@ public class SubjectProcessing extends ObjectProcessing {
                 joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
             }
 
-            if (getAttributesToGet(operationOptions).stream().anyMatch(atg -> extended.contains(atg))){
+            if (getAttributesToGet(operationOptions).stream().anyMatch(atg -> extended.contains(atg))) {
 
                 tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, extensionColumns);
                 joinMap.put(Map.of(TABLE_SU_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
@@ -226,6 +227,100 @@ public class SubjectProcessing extends ObjectProcessing {
 
     }
 
+    @Override
+    public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions) {
+        QueryBuilder queryBuilder;
+
+        String tokenVal = (String) syncToken.getValue();
+        LOG.ok("The sync token value in the evaluation of subject processing sync method: {0}", tokenVal);
+
+        GreaterThanFilter greaterThanFilterBase = (GreaterThanFilter)
+                FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_NAME + "." + ATTR_MODIFIED,
+                        tokenVal));
+
+//        GreaterThanFilter greaterThanFilterMember = (GreaterThanFilter)
+//                FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME + "." + ATTR_MODIFIED,
+//                        tokenVal));
+        GreaterThanFilter greaterThanFilterMember = null;
+//        GreaterThanFilter greaterThanFilterExtension = (GreaterThanFilter)
+//                FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_EXTENSION_NAME + "." + ATTR_MODIFIED,
+//                        tokenVal));
+        GreaterThanFilter greaterThanFilterExtension = null;
+
+        Filter filter = greaterThanFilterBase;
+
+        List<String> extended = configuration.getExtendedSubjectProperties() != null ?
+                Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
+        LOG.ok("test #0");
+        if (getAttributesToGet(operationOptions) != null &&
+                !getAttributesToGet(operationOptions).isEmpty()) {
+
+            LOG.ok("test #1");
+
+            Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
+            Map<Map<String, String>, String> joinMap = new HashMap<>();
+
+            tablesAndColumns.put(TABLE_SU_NAME, columns);
+
+            Set<String> attrsToGet = getAttributesToGet(operationOptions);
+
+            // TODO test remove
+            attrsToGet.forEach(ob -> LOG.ok("ATTR STREAM OBJ: {0}", ob));
+
+            if (getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
+
+                greaterThanFilterMember = (GreaterThanFilter)
+                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME + "." + ATTR_MODIFIED,
+                                tokenVal));
+
+                LOG.ok("test #2");
+
+                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
+                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (getAttributesToGet(operationOptions).stream().anyMatch(atg -> extended.contains(atg))) {
+
+                greaterThanFilterExtension = (GreaterThanFilter)
+                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_EXTENSION_NAME + "." + ATTR_MODIFIED,
+                                tokenVal));
+
+                LOG.ok("test #3");
+
+                tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, extensionColumns);
+                joinMap.put(Map.of(TABLE_SU_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (greaterThanFilterMember != null && greaterThanFilterExtension != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterMember, greaterThanFilterBase,
+                        greaterThanFilterExtension);
+            } else if (greaterThanFilterMember != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterMember, greaterThanFilterBase);
+            } else if (greaterThanFilterExtension != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterBase,
+                        greaterThanFilterExtension);
+            }
+
+            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter,
+                    tablesAndColumns, TABLE_SU_NAME, joinMap, operationOptions);
+        } else {
+
+            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, Map.of(TABLE_SU_NAME, columns),
+                    TABLE_SU_NAME, operationOptions);
+        }
+
+        String query = queryBuilder.build();
+
+        //TODO
+        LOG.ok("### The query: {0}", query);
+
+        ResultSet result = null;
+
+    }
+
     private void buildOptional(ResultSet result, Map<String, Class> columns,
                                HashMap<String, Set<Object>> multiValues, GrouperConfiguration configuration)
             throws SQLException {
@@ -267,8 +362,8 @@ public class SubjectProcessing extends ObjectProcessing {
 
                 if (type.equals(Long.class)) {
 
-                    LOG.ok("Addition of Long type attribute for attribute from column with name {0} to the multivalued" +
-                            " collection", name);
+                    LOG.ok("Addition of Long type attribute for attribute from column with name " +
+                            "{0} to the multivalued collection", name);
 
                     Long resVal = result.getLong(i);
 

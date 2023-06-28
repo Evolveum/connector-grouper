@@ -27,10 +27,7 @@ import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
 import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.Connector;
 import org.identityconnectors.framework.spi.ConnectorClass;
-import org.identityconnectors.framework.spi.operations.DiscoverConfigurationOp;
-import org.identityconnectors.framework.spi.operations.SchemaOp;
-import org.identityconnectors.framework.spi.operations.SearchOp;
-import org.identityconnectors.framework.spi.operations.TestOp;
+import org.identityconnectors.framework.spi.operations.*;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -39,7 +36,8 @@ import java.util.Map;
 import java.util.Set;
 
 @ConnectorClass(displayNameKey = "grouper.connector.display", configurationClass = GrouperConfiguration.class)
-public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp {
+public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp,
+        SyncOp {
 
     private static final Log LOG = Log.getLog(GrouperConnector.class);
 
@@ -205,5 +203,45 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             throw new ConnectorException("Unexpected object class used in extension attribute evaluation.");
         }
 
+    }
+
+    @Override
+    public void sync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler,
+                     OperationOptions operationOptions) {
+
+        LOG.ok("Evaluation of SYNC op method regarding the object class {0} with the following options: {1}", objectClass
+                , operationOptions);
+
+        if (syncToken == null) {
+
+            LOG.ok("Empty token, fetching latest sync token");
+            syncToken = getLatestSyncToken(objectClass);
+        }
+
+        //TODO check
+        Long syncTokenValue = (Long) Long.getLong((String) syncToken.getValue());
+
+        if (objectClass.is(ObjectClass.GROUP_NAME)) {
+
+            GroupProcessing groupProcessing = new GroupProcessing(configuration);
+            groupProcessing.sync(syncToken, syncResultsHandler, operationOptions);
+
+        } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
+
+            SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
+            subjectProcessing.sync(syncToken, syncResultsHandler, operationOptions);
+        } else {
+
+            throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
+                    "Only " + ObjectClass.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
+                    "is supported for SyncOp currently.");
+        }
+
+
+    }
+
+    @Override
+    public SyncToken getLatestSyncToken(ObjectClass objectClass) {
+        return null;
     }
 }
