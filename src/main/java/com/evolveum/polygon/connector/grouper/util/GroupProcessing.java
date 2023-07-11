@@ -37,6 +37,8 @@ public class GroupProcessing extends ObjectProcessing {
     protected static final String ATTR_NAME = "group_name";
     protected static final String ATTR_MEMBERS = "members";
     protected static final String ATTR_MEMBERS_NATIVE = ATTR_SCT_ID_IDX;
+
+    protected Set<String> multiValuedAttributesCatalogue = new HashSet();
     protected Map<String, Class> columns = new HashMap<>();
     private static final ObjectClass O_CLASS = ObjectClass.GROUP;
 
@@ -55,6 +57,8 @@ public class GroupProcessing extends ObjectProcessing {
         columns.put(ATTR_ID_IDX, Long.class);
 
         this.columns.putAll(objectColumns);
+
+        multiValuedAttributesCatalogue.add(ATTR_MEMBERS_NATIVE);
     }
 
     @Override
@@ -163,7 +167,6 @@ public class GroupProcessing extends ObjectProcessing {
 
             PreparedStatement prepareStatement = connection.prepareStatement(query);
             result = prepareStatement.executeQuery();
-            ConnectorObjectBuilder co = null;
 
             while (result.next()) {
 
@@ -176,27 +179,34 @@ public class GroupProcessing extends ObjectProcessing {
                     Attribute fAttr = equalsFilter.getAttribute();
                     if (Uid.NAME.equals(fAttr.getName())) {
 
-                        co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_NAME, result, operationOptions,
-                                columns);
+                        GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result,
+                                columns, multiValuedAttributesCatalogue);
 
                         if (getAttributesToGet(operationOptions) != null &&
                                 !getAttributesToGet(operationOptions).isEmpty()) {
 
-                            populateOptionalAttributes(result, co, configuration);
+                            populateOptionalAttributes(result, go, configuration);
                         }
+
+                        ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+
                         handler.handle(co.build());
                         break;
 
                     } else {
 
-                        co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_NAME, result, operationOptions,
-                                columns);
+                        GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result,
+                                columns, multiValuedAttributesCatalogue);
+
+                        ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
                         handler.handle(co.build());
                     }
                 } else {
 
-                    co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_NAME, result, operationOptions,
-                            columns);
+                    GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result,
+                            columns, multiValuedAttributesCatalogue);
+
+                    ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
                     handler.handle(co.build());
                 }
             }
@@ -209,8 +219,8 @@ public class GroupProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected ConnectorObjectBuilder populateOptionalAttributes(ResultSet result, ConnectorObjectBuilder ob,
-                                                                GrouperConfiguration configuration)
+    protected GrouperObject populateOptionalAttributes(ResultSet result, GrouperObject ob,
+                                                       GrouperConfiguration configuration)
             throws SQLException {
 
         HashMap<String, Set<Object>> multiValues = new HashMap<>();
@@ -228,10 +238,10 @@ public class GroupProcessing extends ObjectProcessing {
 
             if (ATTR_SCT_ID_IDX.equals(attrName)) {
 
-                ob.addAttribute(ATTR_MEMBERS, multiValues.get(attrName));
+                ob.addAttribute(ATTR_MEMBERS, multiValues.get(attrName), multiValuedAttributesCatalogue);
             } else {
 
-                ob.addAttribute(attrName, multiValues.get(attrName));
+                ob.addAttribute(attrName, multiValues.get(attrName), multiValuedAttributesCatalogue);
             }
         }
 
@@ -239,7 +249,8 @@ public class GroupProcessing extends ObjectProcessing {
     }
 
     @Override
-    public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions) {
+    public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions,
+                     Connection connection) {
 
     }
 

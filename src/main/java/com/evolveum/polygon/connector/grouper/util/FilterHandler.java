@@ -179,10 +179,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
             Map<String, Map<String, Class>> tableAndcolumns = r.getColumnInformation();
             String wrappedValue = null;
             Iterator<String> iterator = tableAndcolumns.keySet().iterator();
-            LOG.ok("##### size {0}", tableAndcolumns.size());
             while (iterator.hasNext()) {
-                // TODO
-                LOG.ok("#####");
                 String tableName = iterator.next();
                 Map<String, Class> columns = tableAndcolumns.get(tableName);
 
@@ -193,7 +190,6 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                     String tableNamePart = nameParts[0];
 
                     if (!tableName.equals(tableNamePart)) {
-                        LOG.ok("#####3");
                         continue;
                     }
 
@@ -216,8 +212,6 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                     name = name.contains(".") ? name : tableName + "." + name;
                     break;
                 } else {
-                    // TODO test
-                    LOG.ok("Column has NULL: {0}", name);
                     if (!iterator.hasNext()) {
 
                         throw new ConnectorException("Unexpected exception in string filter processing," +
@@ -225,7 +219,6 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                     }
                 }
             }
-            LOG.ok("#####4");
             query.append(name);
             query.append(_PADDING);
             query.append(operator);
@@ -290,15 +283,10 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
         ResourceQuery query = new ResourceQuery(r.getObjectClass(), r.getColumnInformation());
 
         for (Filter filter : filters) {
-// TEST LOG
-            LOG.ok("### PC 1");
-//            if (query != null) {
 
-                r.add(filter.accept(this, query).getCurrentQuerySnippet(), op);
-//            }
+                r.add(filter.accept(this, query), op);
         }
 
-//        return r.getCurrentQuerySnippet();
     }
 
     private String wrapValue(Map<String, Class> columns, String name, String value) {

@@ -37,6 +37,7 @@ public class QueryBuilder {
     private static Integer limit;
     private String joinStatement;
     private ResourceQuery translatedFilter;
+    private boolean useFullAlias = false;
     private Map<String, Map<String, Class>> columns;
 
     //private Map<String, Map<String, String>> joinPair;
@@ -148,8 +149,6 @@ public class QueryBuilder {
         StringBuilder ret = new StringBuilder("SELECT ");
 
         if (tablesAndColumns == null) {
-//            throw new ConnectorException("Exception while building select statements for database query, no column" +
-//                    "values defined for query.");
 
             ret.append("*");
             ret.append(" ");
@@ -172,6 +171,12 @@ public class QueryBuilder {
 
                     if (noOfTables > 1) {
                         ret.append(key + "." + name);
+
+                        if(useFullAlias){
+
+                            ret.append(" AS "+key + "$" + name);
+                        }
+
                     } else {
 
                         ret.append(name);
@@ -189,5 +194,13 @@ public class QueryBuilder {
         ret.append("FROM ");
         ret.append(selectTable);
         return ret.toString();
+    }
+
+    public boolean isUseFullAlias() {
+        return useFullAlias;
+    }
+
+    public void setUseFullAlias(boolean useFullAlias) {
+        this.useFullAlias = useFullAlias;
     }
 }

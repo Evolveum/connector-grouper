@@ -36,6 +36,8 @@ public class SubjectProcessing extends ObjectProcessing {
     protected static final String ATTR_NAME = ATTR_ID;
     protected static final String ATTR_MEMBER_OF = "member_of";
     protected static final String ATTR_MEMBER_OF_NATIVE = ATTR_GR_ID_IDX;
+
+    protected Set<String> multiValuedAttributesCatalogue = new HashSet();
     protected Map<String, Class> columns = new HashMap<>();
     protected Map<String, Class> suMembershipColumns = Map.ofEntries(
             Map.entry(ATTR_GR_ID_IDX, Long.class),
@@ -50,8 +52,9 @@ public class SubjectProcessing extends ObjectProcessing {
 
         columns.put(ATTR_ID_IDX, Long.class);
         columns.put(ATTR_ID, String.class);
-
         this.columns.putAll(objectColumns);
+
+        multiValuedAttributesCatalogue.add(ATTR_MEMBER_OF_NATIVE);
     }
 
     @Override
@@ -150,7 +153,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
             PreparedStatement prepareStatement = connection.prepareStatement(query);
             result = prepareStatement.executeQuery();
-            ConnectorObjectBuilder co = null;
+            //ConnectorObjectBuilder co = null;
 
             while (result.next()) {
 
@@ -161,28 +164,36 @@ public class SubjectProcessing extends ObjectProcessing {
                     Attribute fAttr = equalsFilter.getAttribute();
                     if (Uid.NAME.equals(fAttr.getName())) {
 
-                        co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_ID, result, operationOptions,
-                                columns);
+                        GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_ID, result,
+                                columns, multiValuedAttributesCatalogue);
 
                         if (getAttributesToGet(operationOptions) != null &&
                                 !getAttributesToGet(operationOptions).isEmpty()) {
 
-                            populateOptionalAttributes(result, co, configuration);
+                            populateOptionalAttributes(result, go, configuration);
                         }
+
+                        ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
 
                         handler.handle(co.build());
                         break;
 
                     } else {
 
-                        co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_ID, result, operationOptions,
-                                columns);
+                        GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_ID, result,
+                                columns, multiValuedAttributesCatalogue);
+
+                        ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+
                         handler.handle(co.build());
                     }
                 } else {
 
-                    co = buildConnectorObject(O_CLASS, ATTR_UID, ATTR_ID, result, operationOptions,
-                            columns);
+                    GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_ID, result,
+                            columns, multiValuedAttributesCatalogue);
+
+                    ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+
                     handler.handle(co.build());
                 }
             }
@@ -195,9 +206,9 @@ public class SubjectProcessing extends ObjectProcessing {
     }
 
     @Override
-    protected ConnectorObjectBuilder populateOptionalAttributes(ResultSet result,
-                                                                ConnectorObjectBuilder ob,
-                                                                GrouperConfiguration configuration)
+    protected GrouperObject populateOptionalAttributes(ResultSet result,
+                                                       GrouperObject ob,
+                                                       GrouperConfiguration configuration)
             throws SQLException {
 
         LOG.info("Evaluating membership attribute values.");
@@ -206,20 +217,22 @@ public class SubjectProcessing extends ObjectProcessing {
 
         buildOptional(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
 
-        while (result.next()) {
 
-            buildOptional(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
-        }
+        //TODO commented for sync test
+//        while (result.next()) {
+//
+//            buildOptional(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
+//        }
 
         for (String attrName : multiValues.keySet()) {
             LOG.ok("Adding attribute values for the attribute {0} to the attribute builder.", attrName);
 
             if (ATTR_GR_ID_IDX.equals(attrName)) {
 
-                ob.addAttribute(ATTR_MEMBER_OF, multiValues.get(attrName));
+                ob.addAttribute(ATTR_MEMBER_OF, multiValues.get(attrName), multiValuedAttributesCatalogue);
             } else {
 
-                ob.addAttribute(attrName, multiValues.get(attrName));
+                ob.addAttribute(attrName, multiValues.get(attrName), multiValuedAttributesCatalogue);
             }
         }
 
@@ -228,7 +241,8 @@ public class SubjectProcessing extends ObjectProcessing {
     }
 
     @Override
-    public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions) {
+    public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions,
+                     Connection connection) {
         QueryBuilder queryBuilder;
 
         String tokenVal = (String) syncToken.getValue();
@@ -238,24 +252,18 @@ public class SubjectProcessing extends ObjectProcessing {
                 FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_NAME + "." + ATTR_MODIFIED,
                         tokenVal));
 
-//        GreaterThanFilter greaterThanFilterMember = (GreaterThanFilter)
-//                FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME + "." + ATTR_MODIFIED,
-//                        tokenVal));
         GreaterThanFilter greaterThanFilterMember = null;
-//        GreaterThanFilter greaterThanFilterExtension = (GreaterThanFilter)
-//                FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_EXTENSION_NAME + "." + ATTR_MODIFIED,
-//                        tokenVal));
+
         GreaterThanFilter greaterThanFilterExtension = null;
 
         Filter filter = greaterThanFilterBase;
 
         List<String> extended = configuration.getExtendedSubjectProperties() != null ?
                 Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
-        LOG.ok("test #0");
+
         if (getAttributesToGet(operationOptions) != null &&
                 !getAttributesToGet(operationOptions).isEmpty()) {
 
-            LOG.ok("test #1");
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
             Map<Map<String, String>, String> joinMap = new HashMap<>();
@@ -264,8 +272,6 @@ public class SubjectProcessing extends ObjectProcessing {
 
             Set<String> attrsToGet = getAttributesToGet(operationOptions);
 
-            // TODO test remove
-            attrsToGet.forEach(ob -> LOG.ok("ATTR STREAM OBJ: {0}", ob));
 
             if (getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
 
@@ -273,7 +279,6 @@ public class SubjectProcessing extends ObjectProcessing {
                         FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME + "." + ATTR_MODIFIED,
                                 tokenVal));
 
-                LOG.ok("test #2");
 
                 tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
                 joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
@@ -285,7 +290,6 @@ public class SubjectProcessing extends ObjectProcessing {
                         FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_EXTENSION_NAME + "." + ATTR_MODIFIED,
                                 tokenVal));
 
-                LOG.ok("test #3");
 
                 tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, extensionColumns);
                 joinMap.put(Map.of(TABLE_SU_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
@@ -311,13 +315,72 @@ public class SubjectProcessing extends ObjectProcessing {
             queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, Map.of(TABLE_SU_NAME, columns),
                     TABLE_SU_NAME, operationOptions);
         }
-
+        queryBuilder.setUseFullAlias(true);
         String query = queryBuilder.build();
 
-        //TODO
-        LOG.ok("### The query: {0}", query);
-
         ResultSet result = null;
+
+        Map<String, GrouperObject> objects = new HashMap<>();
+        try {
+            PreparedStatement prepareStatement = connection.prepareStatement(query);
+            result = prepareStatement.executeQuery();
+
+            while (result.next()) {
+
+                //TODO
+                columns.putAll(suMembershipColumns);
+                columns.putAll(extensionColumns);
+
+
+                // TODO change object processing to incorporate multi valued processing (e.g. as in populate and
+                //  build optional)
+                GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, columns,
+                        multiValuedAttributesCatalogue);
+                // TODO
+                LOG.ok("Evaluated obj #:{0}", go.toString());
+                if (objects.isEmpty()) {
+                    objects.put(go.getIdentifier(), go);
+
+                } else {
+                    String objectID = go.getIdentifier();
+
+                    if (objects.containsKey(objectID)) {
+
+                        GrouperObject mapObject = objects.get(objectID);
+
+                        Map<String, Object> attrMap = go.getAttributes();
+
+                        for (String attName : attrMap.keySet()) {
+
+                            mapObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
+
+                        }
+
+                    } else {
+
+                        objects.put(go.getIdentifier(), go);
+                    }
+                }
+
+            }
+
+            if (objects.isEmpty()) {
+                LOG.ok("Empty object set in sync op");
+            } else {
+                //TODO
+
+                for (String id : objects.keySet()) {
+
+                    String st = objects.get(id).toString();
+
+                    LOG.ok("### {0}", st);
+                }
+            }
+
+        } catch (SQLException e) {
+            //TODO
+            throw new RuntimeException(e);
+        }
 
     }
 

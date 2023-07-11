@@ -42,7 +42,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     private static final Log LOG = Log.getLog(GrouperConnector.class);
 
     private GrouperConfiguration configuration;
-    private GrouperConnection connection;
+    private GrouperConnection grouperConnection;
 
     @Override
     public Configuration getConfiguration() {
@@ -53,16 +53,16 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     public void init(Configuration configuration) {
 
         this.configuration = (GrouperConfiguration) configuration;
-        this.connection = new GrouperConnection(this.configuration);
+        this.grouperConnection = new GrouperConnection(this.configuration);
 
     }
 
     @Override
     public void dispose() {
         configuration = null;
-        if (connection != null) {
-            connection.dispose();
-            connection = null;
+        if (grouperConnection != null) {
+            grouperConnection.dispose();
+            grouperConnection = null;
         }
     }
 
@@ -113,7 +113,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
 
-            subjectProcessing.executeQuery(filter, resultsHandler, operationOptions, connection.getConnection());
+            subjectProcessing.executeQuery(filter, resultsHandler, operationOptions, grouperConnection.getConnection());
 
         }
 
@@ -122,7 +122,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
 
-            groupProcessing.executeQuery(filter, resultsHandler, operationOptions, connection.getConnection());
+            groupProcessing.executeQuery(filter, resultsHandler, operationOptions, grouperConnection.getConnection());
 
         }
 
@@ -132,8 +132,8 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     @Override
     public void test() {
         LOG.info("Executing test operation.");
-        connection.test();
-        connection.dispose();
+        grouperConnection.test();
+        grouperConnection.dispose();
 
         LOG.ok("Test OK");
     }
@@ -179,7 +179,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             GroupProcessing processing = new GroupProcessing(configuration);
 
             try {
-                return processing.fetchExtensionSchema(connection.getConnection());
+                return processing.fetchExtensionSchema(grouperConnection.getConnection());
 
             } catch (SQLException e) {
                 // TODO
@@ -191,7 +191,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             SubjectProcessing processing = new SubjectProcessing(configuration);
 
             try {
-                return processing.fetchExtensionSchema(connection.getConnection());
+                return processing.fetchExtensionSchema(grouperConnection.getConnection());
 
             } catch (SQLException e) {
                 // TODO
@@ -224,12 +224,12 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         if (objectClass.is(ObjectClass.GROUP_NAME)) {
 
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
-            groupProcessing.sync(syncToken, syncResultsHandler, operationOptions);
+            groupProcessing.sync(syncToken, syncResultsHandler, operationOptions, grouperConnection.getConnection());
 
         } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
 
             SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
-            subjectProcessing.sync(syncToken, syncResultsHandler, operationOptions);
+            subjectProcessing.sync(syncToken, syncResultsHandler, operationOptions, grouperConnection.getConnection());
         } else {
 
             throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +

@@ -63,17 +63,14 @@ public class ResourceQuery {
         this.currentQuerySnippet = currentQuerySnippet;
     }
 
-    public void add(String querySnippet, String operator) {
+    public void add(ResourceQuery resourceQuery, String operator) {
 
-        // TODO test only
-        LOG.ok("Query builder value before augmentation: {0}", getCurrentQuerySnippet());
-        LOG.ok("Added value before augmentation: {0}", querySnippet);
         if (getCurrentQuerySnippet() != null) {
 
-            setCurrentQuerySnippet(querySnippet + " " + operator + " (" + getCurrentQuerySnippet() + ")");
+            setCurrentQuerySnippet(resourceQuery.getCurrentQuerySnippet() + " " + operator + " (" + getCurrentQuerySnippet() + ")");
         } else {
 
-            setCurrentQuerySnippet(querySnippet);
+            setCurrentQuerySnippet(resourceQuery.getCurrentQuerySnippet());
         }
 
         LOG.ok("Query builder value after augmentation: {0}", getCurrentQuerySnippet());
