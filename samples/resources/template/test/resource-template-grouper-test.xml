@@ -49,6 +49,7 @@
             <icfc:enableFilteredResultsHandler>false</icfc:enableFilteredResultsHandler>
             <icfc:enableAttributesToGetSearchResultsHandler>false</icfc:enableAttributesToGetSearchResultsHandler >
         </icfc:resultsHandlerConfiguration>
+        <icfc:legacySchema>true</icfc:legacySchema>
     </connectorConfiguration>
 
     <schemaHandling>
