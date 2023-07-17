@@ -308,22 +308,4 @@
 
     </schemaHandling>
 
-    <capabilities>
-        <cachingMetadata>
-            <retrievalTimestamp>2023-05-24T13:23:53.145+02:00</retrievalTimestamp>
-            <serialNumber>d991389de17be20e-55b20a5934dbcc31</serialNumber>
-        </cachingMetadata>
-        <native xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3">
-            <cap:schema/>
-            <cap:read>
-                <cap:returnDefaultAttributesOption>false</cap:returnDefaultAttributesOption>
-            </cap:read>
-            <cap:testConnection/>
-            <cap:script>
-                <cap:host>
-                    <cap:type>connector</cap:type>
-                </cap:host>
-            </cap:script>
-        </native>
-    </capabilities>
 </resource>

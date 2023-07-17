@@ -43,7 +43,7 @@ public class SubjectProcessing extends ObjectProcessing {
     protected Map<String, Class> columns = new HashMap<>();
     protected Map<String, Class> suMembershipColumns = Map.ofEntries(
             Map.entry(ATTR_GR_ID_IDX, Long.class),
-            //TODO test
+
             Map.entry(ATTR_MODIFIED, Long.class)
 
     );
@@ -65,7 +65,7 @@ public class SubjectProcessing extends ObjectProcessing {
         columns.put(ATTR_ID, String.class);
         this.columns.putAll(objectColumns);
 
-        multiValuedAttributesCatalogue.add(ATTR_MEMBER_OF_NATIVE);
+        multiValuedAttributesCatalogue.add(ATTR_MEMBER_OF);
     }
 
     @Override
@@ -137,7 +137,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
             if (getAttributesToGet(operationOptions).contains(ATTR_MEMBER_OF)) {
 
-                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
+                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, membershipColumns);
                 joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
             }
 
@@ -155,85 +155,82 @@ public class SubjectProcessing extends ObjectProcessing {
             queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, Map.of(TABLE_SU_NAME, columns),
                     TABLE_SU_NAME, operationOptions);
         }
+        queryBuilder.setUseFullAlias(true);
         String query = queryBuilder.build();
         ResultSet result = null;
 
         LOG.info("Query about to be executed: {0}", query);
-
+        Map<String, GrouperObject> objects = new HashMap<>();
         try {
 
             PreparedStatement prepareStatement = connection.prepareStatement(query);
             result = prepareStatement.executeQuery();
-            //ConnectorObjectBuilder co = null;
 
             while (result.next()) {
 
-                if (filter instanceof EqualsFilter) {
+                {
 
-                    LOG.ok("Processing Equals Query");
-                    final EqualsFilter equalsFilter = (EqualsFilter) filter;
-                    Attribute fAttr = equalsFilter.getAttribute();
-                    if (Uid.NAME.equals(fAttr.getName())) {
+                    Map<String, Class> mergedColumns = new HashMap<>();
+                    mergedColumns.putAll(columns);
+                    mergedColumns.putAll(suMembershipColumns);
+                    mergedColumns.putAll(extensionColumns);
 
-                        GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_ID, result,
-                                columns, multiValuedAttributesCatalogue, null);
+                    GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
+                            multiValuedAttributesCatalogue, Map.of(ATTR_MEMBER_OF_NATIVE, ATTR_MEMBER_OF));
 
-                        if (getAttributesToGet(operationOptions) != null &&
-                                !getAttributesToGet(operationOptions).isEmpty()) {
-
-                            populateOptionalAttributes(result, go, configuration);
-                        }
-
-                        ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
-
-                        if (configuration.getExcludeDeletedObjects()) {
-                            if (go.isDeleted()) {
-                                LOG.ok("Following object omitted from evaluation, because it's deleted" +
-                                        "identifier: {0} ; name: {1}.", go.getIdentifier(), go.getName());
-
-                                continue;
-                            }
-                        }
-
-                        handler.handle(co.build());
-                        break;
+                    if (objects.isEmpty()) {
+                        objects.put(go.getIdentifier(), go);
 
                     } else {
+                        String objectID = go.getIdentifier();
 
-                        GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_ID, result,
-                                columns, multiValuedAttributesCatalogue, null);
+                        if (objects.containsKey(objectID)) {
 
-                        ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+                            GrouperObject mapObject = objects.get(objectID);
 
-                        if (configuration.getExcludeDeletedObjects()) {
-                            if (go.isDeleted()) {
-                                LOG.ok("Following object omitted from evaluation, because it's deleted" +
-                                        "identifier: {0} ; name: {1}.", go.getIdentifier(), go.getName());
+                            Map<String, Object> attrMap = go.getAttributes();
 
-                                continue;
+                            for (String attName : attrMap.keySet()) {
+
+                                mapObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
+
                             }
+
+                        } else {
+
+                            objects.put(go.getIdentifier(), go);
                         }
-
-                        handler.handle(co.build());
                     }
-                } else {
 
-                    GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_ID, result,
-                            columns, multiValuedAttributesCatalogue, null);
+                }
+            }
 
-                    ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+            if (objects.isEmpty()) {
+                LOG.ok("Empty object set in execute query");
+            } else {
+                for (String objectName : objects.keySet()) {
 
+                    LOG.info("The object name: {0}", objectName);
 
+                    LOG.info("The object: {0}", objects.get(objectName).toString());
+
+                    GrouperObject go = objects.get(objectName);
                     if (configuration.getExcludeDeletedObjects()) {
                         if (go.isDeleted()) {
-                            LOG.ok("Following object omitted from evaluation, because it's deleted" +
-                                    "identifier: {0} ; name: {1}.", go.getIdentifier(), go.getName());
+                            LOG.ok("Following object omitted from evaluation, because it's deleted, identifier: "
+                                    + go.getIdentifier());
 
                             continue;
                         }
                     }
 
-                    handler.handle(co.build());
+                    ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+                    if (!handler.handle(co.build())) {
+
+                        LOG.warn("Result handling interrupted by handler!");
+                        break;
+                    }
+
                 }
             }
 
@@ -246,7 +243,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
     @Override
     protected String getMemberShipAttributeName() {
-        return ATTR_MEMBER_OF_NATIVE;
+        return ATTR_MEMBER_OF;
     }
 
     @Override
@@ -262,41 +259,6 @@ public class SubjectProcessing extends ObjectProcessing {
     @Override
     protected String getMainTableName() {
         return TABLE_SU_NAME;
-    }
-
-    @Override
-    protected GrouperObject populateOptionalAttributes(ResultSet result,
-                                                       GrouperObject ob,
-                                                       GrouperConfiguration configuration)
-            throws SQLException {
-
-        LOG.info("Evaluating membership attribute values.");
-
-        HashMap<String, Set<Object>> multiValues = new HashMap<>();
-
-        buildOptional(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
-
-
-        //TODO commented for sync test
-        while (result.next()) {
-
-            buildOptional(result, Collections.singletonMap(ATTR_GR_ID_IDX, Long.class), multiValues, configuration);
-        }
-
-        for (String attrName : multiValues.keySet()) {
-            LOG.ok("Adding attribute values for the attribute {0} to the attribute builder.", attrName);
-
-            if (ATTR_GR_ID_IDX.equals(attrName)) {
-
-                ob.addAttribute(ATTR_MEMBER_OF, multiValues.get(attrName), multiValuedAttributesCatalogue);
-            } else {
-
-                ob.addAttribute(attrName, multiValues.get(attrName), multiValuedAttributesCatalogue);
-            }
-        }
-
-        return ob;
-
     }
 
     @Override
@@ -337,7 +299,6 @@ public class SubjectProcessing extends ObjectProcessing {
 
             tablesAndColumns.put(TABLE_SU_NAME, Map.of(ATTR_DELETED, String.class,
                     ATTR_ID_IDX, Long.class, ATTR_MODIFIED, Long.class));
-//            tablesAndColumns.put(TABLE_SU_NAME, columns);
 
             Set<String> attrsToGet = getAttributesToGet(operationOptions);
 
@@ -349,7 +310,7 @@ public class SubjectProcessing extends ObjectProcessing {
                                 tokenVal));
 
                 tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, objectColumns);
-                // tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
+
                 joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
             }
 
@@ -360,7 +321,6 @@ public class SubjectProcessing extends ObjectProcessing {
                                 tokenVal));
 
                 tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, objectColumns);
-//                tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, extensionColumns);
                 joinMap.put(Map.of(TABLE_SU_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
             }
 
@@ -399,22 +359,10 @@ public class SubjectProcessing extends ObjectProcessing {
 
             while (result.next()) {
 
-                //TODO
-//                Map<String, Class> mergedColumns = new HashMap<>();
-//                mergedColumns.putAll(columns);
-//                mergedColumns.putAll(suMembershipColumns);
-//                mergedColumns.putAll(extensionColumns);
-                //TODO
-//                columns.putAll(suMembershipColumns);
-//                columns.putAll(extensionColumns);
 
-
-                // TODO change object processing to incorporate multi valued processing (e.g. as in populate and
-                //  build optional)
                 GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                         multiValuedAttributesCatalogue, null);
-                // TODO
-                LOG.ok("Evaluated obj #:{0}", go.toString());
+
                 if (objects.isEmpty()) {
                     objects.put(go.getIdentifier(), go);
 
@@ -444,7 +392,7 @@ public class SubjectProcessing extends ObjectProcessing {
             if (objects.isEmpty()) {
                 LOG.ok("Empty object set in sync op");
             } else {
-                //TODO
+
                 Map<String, GrouperObject> notDeletedObject = new LinkedHashMap<>();
 
                 for (String id : objects.keySet()) {
@@ -452,17 +400,9 @@ public class SubjectProcessing extends ObjectProcessing {
 
                     if (object.isDeleted()) {
 
-//                        builder.setDeltaType(SyncDeltaType.DELETE);
-//                        LOG.ok("### {0} is deleted", id);
-//                        builder.setUid(new Uid(id));
-//                        builder.setToken(new SyncToken(object.getLatestTimestamp()));
-//
-//                        syncResultsHandler.handle(builder.build());
-                        LOG.ok("### {0} is deleted", id);
                     } else {
 
                         notDeletedObject.put(id, object);
-                        LOG.ok("### {0}", id);
                     }
                 }
 
@@ -497,12 +437,10 @@ public class SubjectProcessing extends ObjectProcessing {
 
                     }
                     SyncDelta syncdelta = builder.build();
-                    // TODO remove
-                    LOG.ok("The returned sync delta: {0}, The OID {1}", syncdelta, syncdelta.getUid() == null ?
-                            "null" : syncdelta.getUid());
 
                     if (!syncResultsHandler.handle(syncdelta)) {
 
+                        LOG.warn("Result handling interrupted by handler!");
                         break;
                     }
                 }
@@ -534,9 +472,8 @@ public class SubjectProcessing extends ObjectProcessing {
         QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, null,
                 tablesAndColumns, TABLE_SU_NAME, joinMap, null);
         queryBuilder.setOrderByASC(CollectionUtil.newSet(ATTR_MODIFIED_LATEST));
-        // LOG for now TODO remove
         String query = queryBuilder.buildSyncTokenQuery();
-        LOG.ok("The latest sync token query: {0}", query);
+
 
         ResultSet result = null;
         try {
@@ -589,14 +526,13 @@ public class SubjectProcessing extends ObjectProcessing {
             Map<Map<String, String>, String> joinMap = new HashMap<>();
 
             tablesAndColumns.put(TABLE_SU_NAME, columns);
-// TODO remove log
-            columns.keySet().forEach(key -> LOG.ok("### The column name {0}", key));
+
             Set<String> attrsToGet = getAttributesToGet(operationOptions);
 
 
             if (attrsToGet.contains(ATTR_MEMBER_OF)) {
 
-                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
+                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, membershipColumns);
                 joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
             }
 
@@ -630,19 +566,9 @@ public class SubjectProcessing extends ObjectProcessing {
 
             while (result.next()) {
 
-//                Map<String, Class> mergedColumns = new HashMap<>();
-//                mergedColumns.putAll(columns);
-//                mergedColumns.putAll(suMembershipColumns);
-//                mergedColumns.putAll(extensionColumns);
-
-
-                // TODO change object processing to incorporate multi valued processing (e.g. as in populate and
-                //  build optional)
-
                 GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                         multiValuedAttributesCatalogue, Map.of(ATTR_MEMBER_OF_NATIVE, ATTR_MEMBER_OF));
-                // TODO
-                LOG.ok("Evaluated obj #:{0}", go.toString());
+
                 if (objects.isEmpty()) {
                     objects.put(go.getIdentifier(), go);
 
@@ -687,104 +613,6 @@ public class SubjectProcessing extends ObjectProcessing {
         }
     }
 
-
-    private void buildOptional(ResultSet result, Map<String, Class> columns,
-                               HashMap<String, Set<Object>> multiValues, GrouperConfiguration configuration)
-            throws SQLException {
-
-        LOG.info("Evaluation of SQL objects present in result set for multivalued attributes.");
-
-        ResultSetMetaData meta = result.getMetaData();
-
-        String extAttrName = null;
-        String etxAttrValue = null;
-
-        String[] subjectImProperties = configuration.getExtendedSubjectProperties();
-
-        List<String> extSubjectProperties = null;
-
-
-        if (subjectImProperties != null && subjectImProperties.length > 0) {
-
-            extSubjectProperties = List.of(subjectImProperties);
-        }
-
-        int count = meta.getColumnCount();
-        LOG.ok("Number of columns returned from result set object: {0}", count);
-        // TODO Based on options the handling might be paginated
-        // options
-
-        for (int i = 1; i <= count; i++) {
-            String name = meta.getColumnName(i);
-            LOG.ok("Evaluation of column with name {0}", name);
-            Set<Object> attrValues = new HashSet<>();
-
-            if (multiValues.containsKey(name)) {
-
-                attrValues = multiValues.get(name);
-            }
-
-            if (columns.containsKey(name)) {
-                Class type = columns.get(name);
-
-                if (type.equals(Long.class)) {
-
-                    LOG.ok("Addition of Long type attribute for attribute from column with name " +
-                            "{0} to the multivalued collection", name);
-
-                    Long resVal = result.getLong(i);
-
-                    attrValues.add(result.wasNull() ? null : Long.toString(resVal));
-                    multiValues.put(name, attrValues);
-                }
-
-                if (type.equals(String.class)) {
-
-                    LOG.ok("Addition of String type attribute for attribute from column with name {0} to the multivalued" +
-                            " collection", name);
-
-                    attrValues.add(result.getString(i));
-                    multiValues.put(name, attrValues);
-                }
-
-            } else {
-
-                if (ATTR_EXT_NAME.equals(name)) {
-
-                    extAttrName = result.getString(i);
-                    LOG.ok("Processing ext attr name: {0}", extAttrName);
-                } else if (ATTR_EXT_VALUE.equals(name)) {
-
-                    etxAttrValue = result.getString(i);
-                    LOG.ok("Processing ext attr val: {0}", etxAttrValue);
-                } else {
-
-                    LOG.info("SQL object handling discovered during multivalued attribute evaluation a " +
-                            "column which is not present in the original schema set. The column name: {0}", name);
-                }
-            }
-        }
-
-        LOG.ok("Not present in TYPE map: {0}", extAttrName);
-
-        if (extSubjectProperties != null) {
-
-            if (extAttrName != null && extSubjectProperties.contains(extAttrName)) {
-
-                Set<Object> extSet = new HashSet<>();
-                extSet.add(etxAttrValue);
-                multiValues.put(extAttrName, extSet);
-            } else {
-
-                if (extAttrName != null) {
-                } else {
-
-                    LOG.info("Attribute with the name: {0}, not present in the resource schema.", extAttrName);
-                }
-            }
-        }
-
-    }
 
     public Set<String> fetchExtensionSchema(Connection connection) throws SQLException {
 

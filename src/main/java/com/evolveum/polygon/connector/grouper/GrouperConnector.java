@@ -223,14 +223,11 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
                 , operationOptions);
 
         if (syncToken == null) {
-//TODO remove log
-            LOG.ok("N0.0");
+
             LOG.ok("Empty token, fetching latest sync token");
             syncToken = getLatestSyncToken(objectClass);
         }
-//TODO remove log
-        LOG.ok("N0.1");
-        //TODO check
+
 
         if (objectClass.is(ObjectClass.GROUP_NAME)) {
 
@@ -253,23 +250,18 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
     @Override
     public SyncToken getLatestSyncToken(ObjectClass objectClass) {
-//TODO remove log
-        LOG.ok("N0.7");
+
         if (objectClass.is(ObjectClass.GROUP_NAME)) {
-//TODO remove log
-            LOG.ok("N0.8");
+
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
 
-            //TODO remove log
-            LOG.ok("N0.9");
+
             return groupProcessing.getLatestSyncToken(grouperConnection.getConnection());
 
         } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
-//TODO remove log
-            LOG.ok("N0.10");
+
             SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
-            //TODO remove log
-            LOG.ok("N0.11");
+
             return subjectProcessing.getLatestSyncToken(grouperConnection.getConnection());
         } else {
 

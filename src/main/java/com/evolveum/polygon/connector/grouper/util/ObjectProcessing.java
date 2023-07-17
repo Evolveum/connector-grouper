@@ -50,7 +50,7 @@ public abstract class ObjectProcessing {
     protected Map<String, Class> extensionColumns = Map.ofEntries(
             Map.entry(ATTR_EXT_NAME, String.class),
             Map.entry(ATTR_EXT_VALUE, String.class),
-            //TODO test
+
             Map.entry(ATTR_MODIFIED, Long.class),
             Map.entry(ATTR_DELETED, String.class)
     );
@@ -131,38 +131,58 @@ public abstract class ObjectProcessing {
 
             if (uid_name != null && name.equals(uid_name)) {
 
-                String uidVal = Long.toString(resultSet.getLong(i));
-                LOG.ok("Addition of UID attribute {0}, the value {1}", uid_name, uidVal);
+                if (tableName != null && getMainTableName().equals(tableName)) {
+                    String uidVal = Long.toString(resultSet.getLong(i));
+                    LOG.ok("Addition of UID attribute {0}, the value {1}", uid_name, uidVal);
 
-                grouperObject.setIdentifier(uidVal);
+                    grouperObject.setIdentifier(uidVal);
+
+                } else if (tableName == null) {
+
+                    String uidVal = Long.toString(resultSet.getLong(i));
+                    LOG.ok("Addition of UID attribute {0}, the value {1}", uid_name, uidVal);
+
+                    grouperObject.setIdentifier(uidVal);
+
+                }
+
+
             } else if (name_name != null && name.equals(name_name)) {
 
-                String nameVal = resultSet.getString(i);
-                LOG.ok("Addition of Name attribute {0}, the value {1}", name_name, nameVal);
+                if (tableName != null && getMainTableName().equals(tableName)) {
+                    String nameVal = resultSet.getString(i);
+                    LOG.ok("Addition of Name attribute {0}, the value {1}", name_name, nameVal);
 
-                //TODO
-                grouperObject.setName(nameVal);
+                    grouperObject.setName(nameVal);
+
+                } else if (tableName == null) {
+
+                    String nameVal = resultSet.getString(i);
+                    LOG.ok("Addition of Name attribute {0}, the value {1}", name_name, nameVal);
+
+                    grouperObject.setName(nameVal);
+
+                }
             } else if (ATTR_EXT_NAME.equals(name)) {
 
                 extAttrName = resultSet.getString(i);
                 LOG.ok("Addition of Name attribute {0}", extAttrName);
 
-                //TODO
             } else if (ATTR_EXT_VALUE.equals(name)) {
 
                 etxAttrValue = resultSet.getString(i);
                 LOG.ok("Addition of extension value attribute, the value {0}", etxAttrValue);
             } else if (ATTR_DELETED.equals(name)) {
 
+
                 String deleted = resultSet.getString(i);
 
-                if (getMainTableName().equals(tableName)) {
+                if (tableName == null || getMainTableName().equals(tableName)) {
 
                     if (deleted != null && ATTR_DELETED_TRUE.equals(deleted)) {
 
                         grouperObject.setDeleted(true);
-                        LOG.info("Object" + name_name != null ? " " + name_name + " vas set to deleted" : "vas set to" +
-                                " deleted");
+                        LOG.info("Object vas set to deleted");
                     }
 
                 } else if (getMembershipTableName().equals(tableName)) {
@@ -267,12 +287,15 @@ public abstract class ObjectProcessing {
         if (membershipColumnValue != null) {
 
             if (configuration.getExcludeDeletedObjects()) {
+
+                LOG.ok("conf exclude 1");
                 if (saturateMembership) {
+                    LOG.ok("conf exclude saturate");
                     grouperObject.addAttribute(getMemberShipAttributeName(), membershipColumnValue,
                             multiValuedAttributesCatalogue);
                 }
             } else {
-
+                LOG.ok("conf exclude 2");
                 grouperObject.addAttribute(extAttrName, etxAttrValue, multiValuedAttributesCatalogue);
             }
         }
@@ -314,9 +337,9 @@ public abstract class ObjectProcessing {
         return builder;
     }
 
-    protected abstract GrouperObject populateOptionalAttributes(ResultSet result, GrouperObject ob,
-                                                                GrouperConfiguration configuration)
-            throws SQLException;
+//    protected abstract GrouperObject populateOptionalAttributes(ResultSet result, GrouperObject ob,
+//                                                                GrouperConfiguration configuration)
+//            throws SQLException;
 
     protected Set<String> getAttributesToGet(OperationOptions operationOptions) {
         if (operationOptions != null && operationOptions.getAttributesToGet() != null) {

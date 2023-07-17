@@ -67,26 +67,15 @@ public class GrouperObject {
 
     public void addAttribute(String name, Object value, Set<String> multiValuedAttributesCatalogue) {
 
-        //TODO remove log
-        LOG.ok("X- Attribute being processed: {0}", name);
 
         if (attributes.containsKey(name)) {
 
             Object attrO = attributes.get(name);
 
-
-            //TODO remove log
-
-
             if (attrO instanceof Set<?>) {
 
                 Set<Object> multivalSet = (Set<Object>) attrO;
 
-                //TODO remove log
-                LOG.ok("@ The value is of type {0}", value.getClass());
-
-                //TODO remove log
-                multivalSet.forEach(val -> LOG.ok("@ Current values present in the set: {0}", val));
                 if (value instanceof Set<?>) {
 
                     multivalSet.addAll((Set) value);
@@ -94,7 +83,6 @@ public class GrouperObject {
 
                     multivalSet.add(value);
                 }
-                LOG.ok("Attribute value added: {0}", value);
                 attributes.put(name, multivalSet);
             } else {
 
@@ -112,17 +100,13 @@ public class GrouperObject {
 
             if (multiValuedAttributesCatalogue.contains(name)) {
 
-                //TODO remove log
-                LOG.ok("$$$ Attr name :{0}, value {1}", name, value);
 
                 Set<Object> multivalSet = new HashSet<>();
                 multivalSet.add(value);
                 attributes.put(origName, multivalSet);
-                LOG.ok("$$$ Attr val now: {0}", attributes.get(origName));
+
             } else {
 
-                //TODO remove log
-                LOG.ok("X$$$ Attr name :{0}", name);
                 attributes.put(origName, value);
 
             }

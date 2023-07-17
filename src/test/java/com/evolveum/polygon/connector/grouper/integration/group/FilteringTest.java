@@ -111,7 +111,7 @@ public class FilteringTest extends CommonTestClass {
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
-                "45"));
+                "34"));
 
         grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
@@ -124,7 +124,7 @@ public class FilteringTest extends CommonTestClass {
                     obj.getName(), obj.getValue()));
             LOG.info("### END ###");
 
-            Assert.assertEquals(result.getUid().getUidValue(), "45");
+            Assert.assertEquals(result.getUid().getUidValue(), "34");
         }
     }
 

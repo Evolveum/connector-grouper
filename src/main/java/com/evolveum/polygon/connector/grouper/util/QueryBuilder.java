@@ -82,7 +82,6 @@ public class QueryBuilder {
             }
             this.translatedFilter = null;
         } else {
-            //TODO cleanup
 
             this.translatedFilter = filter.accept(new FilterHandler(),
                     new ResourceQuery(objectClass, columns));
