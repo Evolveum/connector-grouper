@@ -17,19 +17,30 @@
 package util;
 
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.framework.common.objects.ConnectorObject;
-import org.identityconnectors.framework.common.objects.SearchResult;
-import org.identityconnectors.framework.common.objects.SyncDelta;
-import org.identityconnectors.framework.common.objects.SyncResultsHandler;
-import org.identityconnectors.framework.spi.SearchResultsHandler;
+import org.identityconnectors.framework.common.objects.*;
 
 import java.util.ArrayList;
 
-public class TestSyncResultsHandler extends TestSearchResultsHandler implements SyncResultsHandler {
-
+public class TestSyncResultsHandler implements SyncResultsHandler {
+    private static final ArrayList<SyncDelta> uidResult = new ArrayList<>();
     private static final Log LOG = Log.getLog(TestSyncResultsHandler.class);
+
     @Override
     public boolean handle(SyncDelta syncDelta) {
-        return super.handle(syncDelta.getObject());
+
+//        if (syncDelta.getObject() != null) {
+//
+//            return super.handle(syncDelta.getObject());
+//        } else
+            if (syncDelta != null) {
+            return uidResult.add(syncDelta);
+        }
+
+        return false;
+    }
+
+    public ArrayList<SyncDelta> getResult() {
+
+        return uidResult;
     }
 }

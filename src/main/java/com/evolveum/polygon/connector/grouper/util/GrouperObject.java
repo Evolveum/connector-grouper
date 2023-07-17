@@ -19,7 +19,6 @@ package com.evolveum.polygon.connector.grouper.util;
 import org.identityconnectors.common.logging.Log;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class GrouperObject {
 
@@ -28,6 +27,8 @@ public class GrouperObject {
     private String name;
     public Map<String, Object> attributes = new HashMap<>();
     public Boolean deleted = false;
+
+    public Long latestTimestamp = null;
 
     public GrouperObject() {
     }
@@ -56,7 +57,7 @@ public class GrouperObject {
         this.attributes = attributes;
     }
 
-    public Boolean getDeleted() {
+    public Boolean isDeleted() {
         return deleted;
     }
 
@@ -71,13 +72,28 @@ public class GrouperObject {
 
         if (attributes.containsKey(name)) {
 
-            if (attributes.get(name) instanceof Set<?>) {
+            Object attrO = attributes.get(name);
 
-                Set<Object> multivalSet = (Set<Object>) attributes.get(name);
 
-                multivalSet.add(value);
+            //TODO remove log
+
+
+            if (attrO instanceof Set<?>) {
+
+                Set<Object> multivalSet = (Set<Object>) attrO;
+
                 //TODO remove log
-                multivalSet.forEach(val -> LOG.ok("@ Current values present  in the set: {0}", val));
+                LOG.ok("@ The value is of type {0}", value.getClass());
+
+                //TODO remove log
+                multivalSet.forEach(val -> LOG.ok("@ Current values present in the set: {0}", val));
+                if (value instanceof Set<?>) {
+
+                    multivalSet.addAll((Set) value);
+                } else {
+
+                    multivalSet.add(value);
+                }
                 LOG.ok("Attribute value added: {0}", value);
                 attributes.put(name, multivalSet);
             } else {
@@ -86,13 +102,28 @@ public class GrouperObject {
             }
 
         } else {
+
+            String origName = name;
+            if (name.contains("$")) {
+
+                String[] nameParts = name.split("\\$");
+                name = nameParts[1];
+            }
+
             if (multiValuedAttributesCatalogue.contains(name)) {
+
+                //TODO remove log
+                LOG.ok("$$$ Attr name :{0}, value {1}", name, value);
+
                 Set<Object> multivalSet = new HashSet<>();
                 multivalSet.add(value);
-                attributes.put(name, multivalSet);
+                attributes.put(origName, multivalSet);
+                LOG.ok("$$$ Attr val now: {0}", attributes.get(origName));
             } else {
 
-                attributes.put(name, value);
+                //TODO remove log
+                LOG.ok("X$$$ Attr name :{0}", name);
+                attributes.put(origName, value);
 
             }
         }
@@ -102,7 +133,8 @@ public class GrouperObject {
     public String toString() {
 
         String str = "Identifier: " + identifier
-                + "; " + "Name: " + name + "; Attributes:{ ";
+                + "; " + "Name: " + name + "; " + "Deleted: " + deleted + "; " + "Latest Timestamp: " + latestTimestamp
+                + "; Attributes:{ ";
 
         Iterator keyIterator = attributes.keySet().iterator();
 
@@ -117,18 +149,13 @@ public class GrouperObject {
                 while (iterator.hasNext()) {
                     Object object = iterator.next();
 
-                    if (!iterator.hasNext()) {
 
-                        str = str + attrName + ": " + object;
-                    } else {
-
-                        str = str + attrName + ": " + object + "; ";
-                    }
+                    str = str + attrName + ": " + object + "; ";
                 }
             } else {
                 if (!keyIterator.hasNext()) {
 
-                    str = str + attrName + ": " + attributes.get(attrName);
+                    str = str + attrName + ": " + attributes.get(attrName) + " ";
                 } else {
 
                     str = str + attrName + ": " + attributes.get(attrName) + "; ";
@@ -142,4 +169,11 @@ public class GrouperObject {
         return str.toString();
     }
 
+    public Long getLatestTimestamp() {
+        return latestTimestamp;
+    }
+
+    public void setLatestTimestamp(Long latestTimestamp) {
+        this.latestTimestamp = latestTimestamp;
+    }
 }

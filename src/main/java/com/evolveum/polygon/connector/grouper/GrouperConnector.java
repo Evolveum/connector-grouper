@@ -140,6 +140,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
     @Override
     public void testPartialConfiguration() {
+        // Test method would be equal to 'test()', so left empty so there is no additional overhead.
 
     }
 
@@ -148,6 +149,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         Map<String, SuggestedValues> suggestions = new HashMap<>();
 
         Integer connectionValidTimeout = configuration.getConnectionValidTimeout();
+        Boolean excludeDeletedObjects = configuration.getExcludeDeletedObjects();
 
         if (connectionValidTimeout != null) {
 
@@ -156,6 +158,14 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             // Default for connectionValidTimeout
             suggestions.put("timeout", SuggestedValuesBuilder.buildOpen("10"));
+        }
+
+        if (excludeDeletedObjects != null) {
+
+            suggestions.put("excludeDeletedObjects", SuggestedValuesBuilder.buildOpen(excludeDeletedObjects));
+        } else {
+
+            suggestions.put("excludeDeletedObjects", SuggestedValuesBuilder.buildOpen(true));
         }
 
         suggestions.put("extendedGroupProperties", SuggestedValuesBuilder.buildOpen(
@@ -213,13 +223,14 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
                 , operationOptions);
 
         if (syncToken == null) {
-
+//TODO remove log
+            LOG.ok("N0.0");
             LOG.ok("Empty token, fetching latest sync token");
             syncToken = getLatestSyncToken(objectClass);
         }
-
+//TODO remove log
+        LOG.ok("N0.1");
         //TODO check
-        Long syncTokenValue = (Long) Long.getLong((String) syncToken.getValue());
 
         if (objectClass.is(ObjectClass.GROUP_NAME)) {
 
@@ -227,9 +238,9 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             groupProcessing.sync(syncToken, syncResultsHandler, operationOptions, grouperConnection.getConnection());
 
         } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
-
             SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
             subjectProcessing.sync(syncToken, syncResultsHandler, operationOptions, grouperConnection.getConnection());
+
         } else {
 
             throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
@@ -242,6 +253,29 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
     @Override
     public SyncToken getLatestSyncToken(ObjectClass objectClass) {
-        return null;
+//TODO remove log
+        LOG.ok("N0.7");
+        if (objectClass.is(ObjectClass.GROUP_NAME)) {
+//TODO remove log
+            LOG.ok("N0.8");
+            GroupProcessing groupProcessing = new GroupProcessing(configuration);
+
+            //TODO remove log
+            LOG.ok("N0.9");
+            return groupProcessing.getLatestSyncToken(grouperConnection.getConnection());
+
+        } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
+//TODO remove log
+            LOG.ok("N0.10");
+            SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
+            //TODO remove log
+            LOG.ok("N0.11");
+            return subjectProcessing.getLatestSyncToken(grouperConnection.getConnection());
+        } else {
+
+            throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
+                    "Only " + ObjectClass.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
+                    "is supported for SyncOp currently.");
+        }
     }
 }

@@ -173,6 +173,12 @@
                         <synchronize/>
                     </actions>
                 </reaction>
+                <reaction>
+                    <situation>deleted</situation>
+                    <unlink>
+                        <synchronize>true</synchronize>
+                    </unlink>
+                </reaction>
             </synchronization>
 
         </objectType>

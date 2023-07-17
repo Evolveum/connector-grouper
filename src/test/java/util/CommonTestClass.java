@@ -67,7 +67,7 @@ public class CommonTestClass implements ObjectConstants {
         return new TestSearchResultsHandler();
     }
 
-    protected TestSearchResultsHandler getSyncResultHandler() {
+    protected TestSyncResultsHandler getSyncResultHandler() {
 
         return new TestSyncResultsHandler();
     }

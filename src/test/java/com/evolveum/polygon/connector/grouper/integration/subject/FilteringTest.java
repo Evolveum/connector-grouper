@@ -109,7 +109,7 @@ public class FilteringTest extends CommonTestClass {
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
-                "98"));
+                "104"));
 
         grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();

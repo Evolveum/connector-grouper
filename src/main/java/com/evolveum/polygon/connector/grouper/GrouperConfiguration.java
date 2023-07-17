@@ -37,6 +37,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private String host;
     private String[] extendedGroupProperties = {};
     private String[] extendedSubjectProperties = {};
+    private Boolean excludeDeletedObjects = true;
 
     @Override
     public void validate() {
@@ -182,6 +183,17 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
 
     public void setExtendedSubjectProperties(String[] extendedSubjectProperties) {
         this.extendedSubjectProperties = extendedSubjectProperties;
+    }
+
+    @ConfigurationProperty(order = 10, displayMessageKey = "excludeDeletedObjects.display",
+            helpMessageKey = "excludeDeletedObjects.help")
+
+    public Boolean getExcludeDeletedObjects() {
+        return excludeDeletedObjects;
+    }
+
+    public void setExcludeDeletedObjects(Boolean excludeDeletedObjects) {
+        this.excludeDeletedObjects = excludeDeletedObjects;
     }
 
     /// TODO config property to specify dynamic schema scan pool

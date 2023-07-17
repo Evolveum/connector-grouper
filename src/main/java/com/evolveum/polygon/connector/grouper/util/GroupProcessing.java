@@ -17,10 +17,14 @@
 package com.evolveum.polygon.connector.grouper.util;
 
 import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
+import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
+import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
+import org.identityconnectors.framework.common.objects.filter.GreaterThanFilter;
 
 import java.sql.*;
 import java.util.*;
@@ -46,6 +50,18 @@ public class GroupProcessing extends ObjectProcessing {
             Map.entry(ATTR_GR_ID_IDX, Long.class),
             Map.entry(ATTR_SCT_ID_IDX, Long.class)
     );
+
+    protected Map<String, Class> objectConstructionSchema = Map.ofEntries(
+            Map.entry(ATTR_SCT_ID_IDX, Long.class),
+            Map.entry(ATTR_NAME, String.class),
+            Map.entry(ATTR_DISPLAY_NAME, String.class),
+            Map.entry(ATTR_DESCRIPTION, String.class),
+            Map.entry(ATTR_ID_IDX, String.class),
+            Map.entry(ATTR_DELETED, String.class),
+            Map.entry(ATTR_EXT_NAME, String.class),
+            Map.entry(ATTR_EXT_VALUE, String.class)
+    );
+
 
     public GroupProcessing(GrouperConfiguration configuration) {
 
@@ -180,7 +196,7 @@ public class GroupProcessing extends ObjectProcessing {
                     if (Uid.NAME.equals(fAttr.getName())) {
 
                         GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result,
-                                columns, multiValuedAttributesCatalogue);
+                                columns, multiValuedAttributesCatalogue, null);
 
                         if (getAttributesToGet(operationOptions) != null &&
                                 !getAttributesToGet(operationOptions).isEmpty()) {
@@ -190,23 +206,52 @@ public class GroupProcessing extends ObjectProcessing {
 
                         ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
 
+                        if (configuration.getExcludeDeletedObjects()) {
+                            if (go.isDeleted()) {
+                                LOG.ok("Following object omitted from evaluation, because it's deleted" +
+                                        "identifier: {0} ; name: {1}.", go.getIdentifier(), go.getName());
+
+                                continue;
+                            }
+                        }
+
                         handler.handle(co.build());
                         break;
 
                     } else {
 
                         GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result,
-                                columns, multiValuedAttributesCatalogue);
+                                columns, multiValuedAttributesCatalogue, null);
 
                         ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+
+                        if (configuration.getExcludeDeletedObjects()) {
+                            if (go.isDeleted()) {
+                                LOG.ok("Following object omitted from evaluation, because it's deleted" +
+                                        "identifier: {0} ; name: {1}.", go.getIdentifier(), go.getName());
+
+                                continue;
+                            }
+                        }
+
                         handler.handle(co.build());
                     }
                 } else {
 
                     GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result,
-                            columns, multiValuedAttributesCatalogue);
+                            columns, multiValuedAttributesCatalogue, null);
 
                     ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+
+                    if (configuration.getExcludeDeletedObjects()) {
+                        if (go.isDeleted()) {
+                            LOG.ok("Following object omitted from evaluation, because it's deleted" +
+                                    "identifier: {0} ; name: {1}.", go.getIdentifier(), go.getName());
+
+                            continue;
+                        }
+                    }
+
                     handler.handle(co.build());
                 }
             }
@@ -216,6 +261,26 @@ public class GroupProcessing extends ObjectProcessing {
             // TODO
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    protected String getMemberShipAttributeName() {
+        return ATTR_MEMBERS_NATIVE;
+    }
+
+    @Override
+    protected String getExtensionAttributeTableName() {
+        return TABLE_GR_EXTENSION_NAME;
+    }
+
+    @Override
+    protected String getMembershipTableName() {
+        return TABLE_MEMBERSHIP_NAME;
+    }
+
+    @Override
+    protected String getMainTableName() {
+        return TABLE_GR_NAME;
     }
 
     @Override
@@ -251,7 +316,390 @@ public class GroupProcessing extends ObjectProcessing {
     @Override
     public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions,
                      Connection connection) {
+        QueryBuilder queryBuilder;
 
+        String tokenVal;
+        if (syncToken.getValue() instanceof Long) {
+
+            tokenVal = Long.toString((Long) syncToken.getValue());
+        } else {
+            tokenVal = (String) syncToken.getValue();
+        }
+
+        LOG.ok("The sync token value in the evaluation of subject processing sync method: {0}", tokenVal);
+
+        GreaterThanFilter greaterThanFilterBase = (GreaterThanFilter)
+                FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_GR_NAME + "." + ATTR_MODIFIED,
+                        tokenVal));
+
+        GreaterThanFilter greaterThanFilterMember = null;
+
+        GreaterThanFilter greaterThanFilterExtension = null;
+
+        Filter filter = greaterThanFilterBase;
+
+        List<String> extended = configuration.getExtendedSubjectProperties() != null ?
+                Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
+
+        if (getAttributesToGet(operationOptions) != null &&
+                !getAttributesToGet(operationOptions).isEmpty()) {
+
+
+            Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
+            Map<Map<String, String>, String> joinMap = new HashMap<>();
+
+            tablesAndColumns.put(TABLE_GR_NAME, Map.of(ATTR_DELETED, String.class,
+                    ATTR_ID_IDX, Long.class, ATTR_MODIFIED, Long.class));
+//            tablesAndColumns.put(TABLE_SU_NAME, columns);
+
+            Set<String> attrsToGet = getAttributesToGet(operationOptions);
+
+
+            if (attrsToGet.contains(ATTR_MEMBERS)) {
+
+                greaterThanFilterMember = (GreaterThanFilter)
+                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME + "." + ATTR_MODIFIED,
+                                tokenVal));
+
+                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, objectColumns);
+                // tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, suMembershipColumns);
+                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (attrsToGet.stream().anyMatch(atg -> extended.contains(atg))) {
+
+                greaterThanFilterExtension = (GreaterThanFilter)
+                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_GR_EXTENSION_NAME + "." +
+                                        ATTR_MODIFIED,
+                                tokenVal));
+
+                tablesAndColumns.put(TABLE_GR_EXTENSION_NAME, objectColumns);
+//                tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, extensionColumns);
+                joinMap.put(Map.of(TABLE_GR_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (greaterThanFilterMember != null && greaterThanFilterExtension != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterMember, greaterThanFilterBase,
+                        greaterThanFilterExtension);
+            } else if (greaterThanFilterMember != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterMember, greaterThanFilterBase);
+            } else if (greaterThanFilterExtension != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterBase,
+                        greaterThanFilterExtension);
+            }
+
+            queryBuilder = new QueryBuilder(O_CLASS, filter,
+                    tablesAndColumns, TABLE_GR_NAME, joinMap, operationOptions);
+        } else {
+
+            queryBuilder = new QueryBuilder(O_CLASS, filter, Map.of(TABLE_GR_NAME, columns),
+                    TABLE_GR_NAME, operationOptions);
+        }
+        queryBuilder.setUseFullAlias(true);
+        queryBuilder.setOrderByASC(CollectionUtil.newSet(ATTR_MODIFIED_LATEST));
+        queryBuilder.setAsSyncQuery(true);
+
+        String query = queryBuilder.build();
+
+        ResultSet result = null;
+
+        Map<String, GrouperObject> objects = new LinkedHashMap<>();
+        try {
+            PreparedStatement prepareStatement = connection.prepareStatement(query);
+            result = prepareStatement.executeQuery();
+
+            while (result.next()) {
+
+                //TODO
+                Map<String, Class> mergedColumns = new HashMap<>();
+                mergedColumns.putAll(columns);
+                mergedColumns.putAll(grMembershipColumns);
+                mergedColumns.putAll(extensionColumns);
+                //TODO
+//                columns.putAll(suMembershipColumns);
+//                columns.putAll(extensionColumns);
+
+
+                // TODO change object processing to incorporate multi valued processing (e.g. as in populate and
+                //  build optional)
+                GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
+                        multiValuedAttributesCatalogue, null);
+                // TODO
+                LOG.ok("Evaluated obj #:{0}", go.toString());
+                if (objects.isEmpty()) {
+                    objects.put(go.getIdentifier(), go);
+
+                } else {
+                    String objectID = go.getIdentifier();
+
+                    if (objects.containsKey(objectID)) {
+
+                        GrouperObject mapObject = objects.get(objectID);
+
+                        Map<String, Object> attrMap = go.getAttributes();
+
+                        for (String attName : attrMap.keySet()) {
+
+                            mapObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
+
+                        }
+
+                    } else {
+
+                        objects.put(go.getIdentifier(), go);
+                    }
+                }
+
+            }
+
+            if (objects.isEmpty()) {
+                LOG.ok("Empty object set in sync op");
+            } else {
+                //TODO
+                Map<String, GrouperObject> notDeletedObject = new LinkedHashMap<>();
+
+                for (String id : objects.keySet()) {
+                    GrouperObject object = objects.get(id);
+
+                    if (object.isDeleted()) {
+
+//                        builder.setDeltaType(SyncDeltaType.DELETE);
+//                        LOG.ok("### {0} is deleted", id);
+//                        builder.setUid(new Uid(id));
+//                        builder.setToken(new SyncToken(object.getLatestTimestamp()));
+//
+//                        syncResultsHandler.handle(builder.build());
+                        LOG.ok("### {0} is deleted", id);
+                    } else {
+
+                        notDeletedObject.put(id, object);
+                        LOG.ok("### {0}", id);
+                    }
+                }
+
+                if (!notDeletedObject.isEmpty()) {
+                    notDeletedObject = fetchFullNonDeletedObjects(notDeletedObject, operationOptions, connection);
+                }
+
+                for (String id : objects.keySet()) {
+
+                    SyncDeltaBuilder builder = new SyncDeltaBuilder();
+                    builder.setObjectClass(O_CLASS);
+                    GrouperObject objectPartial = objects.get(id);
+                    if (!notDeletedObject.isEmpty() && notDeletedObject.containsKey(id)) {
+
+                        GrouperObject nonDelObjFull = notDeletedObject.get(id);
+                        builder.setDeltaType(SyncDeltaType.CREATE_OR_UPDATE);
+                        builder.setUid(new Uid(id));
+                        builder.setToken(new SyncToken(objectPartial.getLatestTimestamp()));
+
+                        ConnectorObjectBuilder objectBuilder = buildConnectorObject(O_CLASS, nonDelObjFull,
+                                operationOptions);
+
+                        builder.setObject(objectBuilder.build());
+
+
+                    } else {
+
+                        builder.setDeltaType(SyncDeltaType.DELETE);
+                        LOG.ok("### {0} is deleted", id);
+                        builder.setUid(new Uid(id));
+                        builder.setToken(new SyncToken(objectPartial.getLatestTimestamp()));
+
+                    }
+                    SyncDelta syncdelta = builder.build();
+                    // TODO remove
+                    LOG.ok("The returned sync delta: {0}, The OID {1}", syncdelta, syncdelta.getUid() == null ?
+                            "null" : syncdelta.getUid());
+
+                    if (!syncResultsHandler.handle(syncdelta)) {
+
+                        break;
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            //TODO
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    @Override
+    public SyncToken getLatestSyncToken(Connection connection) {
+        LOG.ok("Processing through the 'getLatestSyncToken' method for the objectClass {0}", ObjectClass.GROUP);
+
+        Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
+        Map<Map<String, String>, String> joinMap = new HashMap<>();
+
+        // Joining all tables related to object type
+        tablesAndColumns.put(TABLE_GR_NAME, Map.of(ATTR_MODIFIED, Long.class));
+        tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, Map.of(ATTR_MODIFIED, Long.class));
+        tablesAndColumns.put(TABLE_GR_EXTENSION_NAME, Map.of(ATTR_MODIFIED, Long.class));
+
+        joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
+        joinMap.put(Map.of(TABLE_GR_EXTENSION_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
+
+
+        QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, null,
+                tablesAndColumns, TABLE_GR_NAME, joinMap, null);
+        queryBuilder.setOrderByASC(CollectionUtil.newSet(ATTR_MODIFIED_LATEST));
+        // LOG for now TODO remove
+        String query = queryBuilder.buildSyncTokenQuery();
+        LOG.ok("The latest sync token query: {0}", query);
+
+        ResultSet result = null;
+        try {
+            PreparedStatement prepareStatement = connection.prepareStatement(query);
+            result = prepareStatement.executeQuery();
+
+            while (result.next()) {
+
+                ResultSetMetaData meta = result.getMetaData();
+                int count = meta.getColumnCount();
+
+                for (int i = 1; i <= count; i++) {
+                    String name = meta.getColumnName(i);
+                    LOG.ok("Evaluation of column with name {0}", name);
+                    Long resVal = result.getLong(i);
+
+                    Long val = result.wasNull() ? null : resVal;
+
+                    return new SyncToken(val);
+                }
+            }
+
+        } catch (SQLException e) {
+            //TODO
+            throw new RuntimeException(e);
+        }
+
+        throw new ConnectorException("Latest sync token could not be fetched.");
+    }
+
+    private Map<String, GrouperObject> fetchFullNonDeletedObjects(Map<String, GrouperObject> notDeletedObject,
+                                                                  OperationOptions operationOptions,
+                                                                  Connection connection) {
+
+        QueryBuilder queryBuilder;
+        //TODO clean up
+        Set<String> idSet = new LinkedHashSet<>();
+        for (String identifier : notDeletedObject.keySet()) {
+
+            idSet.add(identifier);
+        }
+
+        List<String> extended = configuration.getExtendedGroupProperties() != null ?
+                Arrays.asList(configuration.getExtendedGroupProperties()) : null;
+
+        if (getAttributesToGet(operationOptions) != null &&
+                !getAttributesToGet(operationOptions).isEmpty()) {
+
+
+            Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
+            Map<Map<String, String>, String> joinMap = new HashMap<>();
+
+            tablesAndColumns.put(TABLE_GR_NAME, columns);
+// TODO remove log
+            columns.keySet().forEach(key -> LOG.ok("### The column name {0}", key));
+            Set<String> attrsToGet = getAttributesToGet(operationOptions);
+
+
+            if (attrsToGet.contains(ATTR_MEMBERS)) {
+
+                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, grMembershipColumns);
+                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (attrsToGet.stream().anyMatch(atg -> extended.contains(atg))) {
+
+                tablesAndColumns.put(TABLE_GR_EXTENSION_NAME, extensionColumns);
+                joinMap.put(Map.of(TABLE_GR_EXTENSION_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
+            }
+
+            queryBuilder = new QueryBuilder(O_CLASS, null,
+                    tablesAndColumns, TABLE_GR_NAME, joinMap, operationOptions);
+        } else {
+
+            queryBuilder = new QueryBuilder(O_CLASS, null, Map.of(TABLE_GR_NAME, columns),
+                    TABLE_GR_NAME, operationOptions);
+        }
+
+        queryBuilder.setUseFullAlias(true);
+        queryBuilder.setInStatement(Map.of(TABLE_GR_NAME + "." + ATTR_UID, idSet));
+
+        String query = queryBuilder.build();
+
+        ResultSet result = null;
+
+        Map<String, GrouperObject> objects = new HashMap<>();
+
+        try {
+
+            PreparedStatement prepareStatement = connection.prepareStatement(query);
+            result = prepareStatement.executeQuery();
+
+            while (result.next()) {
+
+                Map<String, Class> mergedColumns = new HashMap<>();
+                mergedColumns.putAll(columns);
+                mergedColumns.putAll(grMembershipColumns);
+                mergedColumns.putAll(extensionColumns);
+
+
+                // TODO change object processing to incorporate multi valued processing (e.g. as in populate and
+                //  build optional)
+
+                GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
+                        multiValuedAttributesCatalogue, Map.of(ATTR_MEMBERS_NATIVE, ATTR_MEMBERS));
+                // TODO
+                LOG.ok("Evaluated obj #:{0}", go.toString());
+                if (objects.isEmpty()) {
+                    objects.put(go.getIdentifier(), go);
+
+                } else {
+                    String objectID = go.getIdentifier();
+
+                    if (objects.containsKey(objectID)) {
+
+                        GrouperObject mapObject = objects.get(objectID);
+
+                        Map<String, Object> attrMap = go.getAttributes();
+
+                        for (String attName : attrMap.keySet()) {
+
+                            mapObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
+
+                        }
+
+                    } else {
+
+                        objects.put(go.getIdentifier(), go);
+                    }
+                }
+
+            }
+
+            if (objects.isEmpty()) {
+                LOG.ok("Empty object set in sync op");
+            } else {
+                for (String objectName : objects.keySet()) {
+
+                    LOG.info("The object name: {0}", objectName);
+
+                    LOG.info("The object: {0}", objects.get(objectName).toString());
+                }
+            }
+
+            return objects;
+        } catch (SQLException e) {
+            //TODO
+            throw new RuntimeException(e);
+        }
     }
 
     private void buildOptional(ResultSet result, Map<String, Class> columns,
