@@ -36,6 +36,7 @@ public class TestSearchResultsHandler implements SearchResultsHandler {
 
     @Override
     public boolean handle(ConnectorObject connectorObject) {
+        LOG.ok("Test handler handling object : {0}", connectorObject);
         result.add(connectorObject);
         return true;
     }

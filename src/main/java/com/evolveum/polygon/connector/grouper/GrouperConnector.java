@@ -27,10 +27,7 @@ import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
 import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.Connector;
 import org.identityconnectors.framework.spi.ConnectorClass;
-import org.identityconnectors.framework.spi.operations.DiscoverConfigurationOp;
-import org.identityconnectors.framework.spi.operations.SchemaOp;
-import org.identityconnectors.framework.spi.operations.SearchOp;
-import org.identityconnectors.framework.spi.operations.TestOp;
+import org.identityconnectors.framework.spi.operations.*;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -39,12 +36,13 @@ import java.util.Map;
 import java.util.Set;
 
 @ConnectorClass(displayNameKey = "grouper.connector.display", configurationClass = GrouperConfiguration.class)
-public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp {
+public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp,
+        SyncOp {
 
     private static final Log LOG = Log.getLog(GrouperConnector.class);
 
     private GrouperConfiguration configuration;
-    private GrouperConnection connection;
+    private GrouperConnection grouperConnection;
 
     @Override
     public Configuration getConfiguration() {
@@ -55,16 +53,16 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     public void init(Configuration configuration) {
 
         this.configuration = (GrouperConfiguration) configuration;
-        this.connection = new GrouperConnection(this.configuration);
+        this.grouperConnection = new GrouperConnection(this.configuration);
 
     }
 
     @Override
     public void dispose() {
         configuration = null;
-        if (connection != null) {
-            connection.dispose();
-            connection = null;
+        if (grouperConnection != null) {
+            grouperConnection.dispose();
+            grouperConnection = null;
         }
     }
 
@@ -115,7 +113,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
 
-            subjectProcessing.executeQuery(filter, resultsHandler, operationOptions, connection.getConnection());
+            subjectProcessing.executeQuery(filter, resultsHandler, operationOptions, grouperConnection.getConnection());
 
         }
 
@@ -124,7 +122,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
 
-            groupProcessing.executeQuery(filter, resultsHandler, operationOptions, connection.getConnection());
+            groupProcessing.executeQuery(filter, resultsHandler, operationOptions, grouperConnection.getConnection());
 
         }
 
@@ -134,14 +132,15 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     @Override
     public void test() {
         LOG.info("Executing test operation.");
-        connection.test();
-        connection.dispose();
+        grouperConnection.test();
+        grouperConnection.dispose();
 
         LOG.ok("Test OK");
     }
 
     @Override
     public void testPartialConfiguration() {
+        // Test method would be equal to 'test()', so left empty so there is no additional overhead.
 
     }
 
@@ -150,6 +149,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         Map<String, SuggestedValues> suggestions = new HashMap<>();
 
         Integer connectionValidTimeout = configuration.getConnectionValidTimeout();
+        Boolean excludeDeletedObjects = configuration.getExcludeDeletedObjects();
 
         if (connectionValidTimeout != null) {
 
@@ -158,6 +158,14 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             // Default for connectionValidTimeout
             suggestions.put("timeout", SuggestedValuesBuilder.buildOpen("10"));
+        }
+
+        if (excludeDeletedObjects != null) {
+
+            suggestions.put("excludeDeletedObjects", SuggestedValuesBuilder.buildOpen(excludeDeletedObjects));
+        } else {
+
+            suggestions.put("excludeDeletedObjects", SuggestedValuesBuilder.buildOpen(true));
         }
 
         suggestions.put("extendedGroupProperties", SuggestedValuesBuilder.buildOpen(
@@ -181,7 +189,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             GroupProcessing processing = new GroupProcessing(configuration);
 
             try {
-                return processing.fetchExtensionSchema(connection.getConnection());
+                return processing.fetchExtensionSchema(grouperConnection.getConnection());
 
             } catch (SQLException e) {
                 // TODO
@@ -193,7 +201,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             SubjectProcessing processing = new SubjectProcessing(configuration);
 
             try {
-                return processing.fetchExtensionSchema(connection.getConnection());
+                return processing.fetchExtensionSchema(grouperConnection.getConnection());
 
             } catch (SQLException e) {
                 // TODO
@@ -205,5 +213,61 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             throw new ConnectorException("Unexpected object class used in extension attribute evaluation.");
         }
 
+    }
+
+    @Override
+    public void sync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler,
+                     OperationOptions operationOptions) {
+
+        LOG.ok("Evaluation of SYNC op method regarding the object class {0} with the following options: {1}", objectClass
+                , operationOptions);
+
+        if (syncToken == null) {
+
+            LOG.ok("Empty token, fetching latest sync token");
+            syncToken = getLatestSyncToken(objectClass);
+        }
+
+
+        if (objectClass.is(ObjectClass.GROUP_NAME)) {
+
+            GroupProcessing groupProcessing = new GroupProcessing(configuration);
+            groupProcessing.sync(syncToken, syncResultsHandler, operationOptions, grouperConnection.getConnection());
+
+        } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
+            SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
+            subjectProcessing.sync(syncToken, syncResultsHandler, operationOptions, grouperConnection.getConnection());
+
+        } else {
+
+            throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
+                    "Only " + ObjectClass.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
+                    "is supported for SyncOp currently.");
+        }
+
+
+    }
+
+    @Override
+    public SyncToken getLatestSyncToken(ObjectClass objectClass) {
+
+        if (objectClass.is(ObjectClass.GROUP_NAME)) {
+
+            GroupProcessing groupProcessing = new GroupProcessing(configuration);
+
+
+            return groupProcessing.getLatestSyncToken(grouperConnection.getConnection());
+
+        } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
+
+            SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
+
+            return subjectProcessing.getLatestSyncToken(grouperConnection.getConnection());
+        } else {
+
+            throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
+                    "Only " + ObjectClass.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
+                    "is supported for SyncOp currently.");
+        }
     }
 }

@@ -23,7 +23,7 @@ import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.filter.ContainsAllValuesFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
-import java.util.Map;
+import java.util.*;
 
 public class QueryBuilder {
     private static final Log LOG = Log.getLog(QueryBuilder.class);
@@ -33,14 +33,26 @@ public class QueryBuilder {
     private static final String _LEFT = "LEFT";
     private static final String _JOIN = "JOIN";
     private static final String _ON = "ON";
+    private static final String _IN = "IN";
     private static final String _LIMIT = "LIMIT";
+    private static final String _GROUP_BY = "GROUP BY";
+    private static final String _ORDER_BY_ASC = "ORDER BY";
+    private static final String _GREATEST = "GREATEST";
+    private static final String _MAX = "MAX";
+    private static final String _ASC = "ASC";
     private static Integer limit;
     private String joinStatement;
     private ResourceQuery translatedFilter;
+    private boolean useFullAlias = false;
+    private boolean asSyncQuery = false;
+
+    private Set<String> orderByASC = new HashSet<>();
     private Map<String, Map<String, Class>> columns;
 
-    //private Map<String, Map<String, String>> joinPair;
-    private Map< Map<String, String> ,String> joinPair;
+    private Map<Map<String, String>, String> joinPair;
+
+    private Set<String> groupByColumns = new HashSet<>();
+    private Map<String, Set<String>> inStatement = new HashMap<>();
 
     public QueryBuilder(ObjectClass objectClass, String selectTable, Integer limit) {
 
@@ -64,25 +76,24 @@ public class QueryBuilder {
 
         if (filter == null) {
 
-            LOG.ok("Empty query parameter, returning full list of objects of the object class: {0}"
-                    , objectClass);
+            if (inStatement != null && !inStatement.isEmpty()) {
+                LOG.ok("Empty query parameter, returning full list of objects of the object class: {0}"
+                        , objectClass);
+            }
             this.translatedFilter = null;
         } else {
 
-            if (filter != null) {
+            this.translatedFilter = filter.accept(new FilterHandler(),
+                    new ResourceQuery(objectClass, columns));
+        }
 
-                if (joinPair != null) {
-                    if (filter instanceof ContainsAllValuesFilter) {
+        if (joinPair != null) {
+            if (filter != null && filter instanceof ContainsAllValuesFilter) {
 
-                        joinStatement = _INNER + " " + _JOIN;
-                    } else {
+                joinStatement = _INNER + " " + _JOIN;
+            } else {
 
-                        joinStatement = _LEFT + " " + _JOIN;
-                    }
-                }
-
-                this.translatedFilter = filter.accept(new FilterHandler(),
-                        new ResourceQuery(objectClass, columns));
+                joinStatement = _LEFT + " " + _JOIN;
             }
         }
 
@@ -112,7 +123,7 @@ public class QueryBuilder {
                 for (String joinTable : selectTableJoinMap.keySet()) {
 
                     String joinParam = selectTableJoinMap.get(joinTable);
-                    LOG.ok("Augmenting Select, joining with with table {0} on the parameter {1}.", joinTable,
+                    LOG.ok("Augmenting Select, joining with table {0} on the parameter {1}.", joinTable,
                             joinParam);
 
                     statementString = statementString + " " + joinStatement + " " + joinTable + " " + _ON + " "
@@ -123,12 +134,85 @@ public class QueryBuilder {
 
         if (translatedFilter != null) {
 
-            statementString = statementString + " " + _WHERE + " " + translatedFilter.getQuery();
+            statementString = statementString + " " + _WHERE + " " + translatedFilter.getCurrentQuerySnippet();
+        }
+
+        if (inStatement != null && !inStatement.isEmpty()) {
+
+            LinkedHashSet<String> inSet = null;
+            String queryAttr = null;
+
+            for (String attrNam : inStatement.keySet()) {
+
+                queryAttr = attrNam;
+                inSet = (LinkedHashSet<String>) inStatement.get(attrNam);
+
+                //Expecting only one query attribute
+                break;
+            }
+
+            if (inSet != null && !inSet.isEmpty()) {
+            } else {
+                throw new ConnectorException("Exception while listing changed accounts for the SYNC operation, " +
+                        "list of changed accounts is empty");
+            }
+
+            statementString = statementString + " " + _WHERE + " " + queryAttr + " " + _IN + "(";
+
+            Iterator<String> inIterator = inSet.iterator();
+            while (inIterator.hasNext()) {
+
+                String inStatement = inIterator.next();
+                statementString = statementString + inStatement;
+
+                if (!inIterator.hasNext()) {
+                } else {
+
+                    statementString = statementString + ", ";
+                }
+            }
+
+            statementString = statementString + ")";
         }
 
         if (limit != null) {
 
             statementString = statementString + " " + _LIMIT + " " + limit;
+        }
+
+        if (asSyncQuery && groupByColumns != null
+                && !groupByColumns.isEmpty()) {
+
+            statementString = statementString + " " + _GROUP_BY + "";
+
+            Iterator<String> grpByIterator = groupByColumns.iterator();
+
+            while (grpByIterator.hasNext()) {
+
+                String column = grpByIterator.next();
+                statementString = statementString + " " + column;
+                if (!grpByIterator.hasNext()) {
+                } else {
+
+                    statementString = statementString + ",";
+                }
+            }
+        }
+
+        if (orderByASC != null && !orderByASC.isEmpty()) {
+
+            Iterator<String> orderIterator = orderByASC.iterator();
+            statementString = statementString + " " + _ORDER_BY_ASC;
+            while (orderIterator.hasNext()) {
+                String orderElement = orderIterator.next();
+
+                statementString = statementString + " " + orderElement;
+                if (!orderIterator.hasNext()) {
+                } else {
+
+                    statementString = statementString + ",";
+                }
+            }
         }
 
         LOG.ok("Using the following statement string in the select statement: {0}", statementString);
@@ -146,10 +230,9 @@ public class QueryBuilder {
         }
 
         StringBuilder ret = new StringBuilder("SELECT ");
+        Set<String> modColumns = new HashSet<>();
 
         if (tablesAndColumns == null) {
-//            throw new ConnectorException("Exception while building select statements for database query, no column" +
-//                    "values defined for query.");
 
             ret.append("*");
             ret.append(" ");
@@ -165,6 +248,19 @@ public class QueryBuilder {
                 for (String cName : columnsMap.keySet()) {
 
                     String name = cName;
+                    if (asSyncQuery) {
+
+                        if (ObjectProcessing.ATTR_MODIFIED.equals(name)) {
+
+                            modColumns.add(key + "." + name);
+                            continue;
+                        } else {
+
+                            groupByColumns.add(key + "." + name);
+                        }
+
+                    }
+
                     LOG.ok("Column name used in select statement: {0}", name);
                     if (!first) {
                         ret.append(", ");
@@ -172,6 +268,12 @@ public class QueryBuilder {
 
                     if (noOfTables > 1) {
                         ret.append(key + "." + name);
+
+                        if (useFullAlias) {
+
+                            ret.append(" AS " + key + "$" + name);
+                        }
+
                     } else {
 
                         ret.append(name);
@@ -181,13 +283,69 @@ public class QueryBuilder {
                 }
 
             }
-
-//            ret.append("FROM ");
-//            ret.append(selectTable);
-//            return ret.toString();
         }
+
+        if (asSyncQuery) {
+            if (groupByColumns != null && !groupByColumns.isEmpty()) {
+                ret.append(",");
+            }
+            ret.append(buildOneFromMany(modColumns));
+        }
+
         ret.append("FROM ");
         ret.append(selectTable);
         return ret.toString();
     }
+
+    private String buildOneFromMany(Set<String> modColumns) {
+        String out = _GREATEST + "(";
+
+        Iterator<String> columnIterator = modColumns.iterator();
+
+        while (columnIterator.hasNext()) {
+            String name = columnIterator.next();
+            out = out + " " + _MAX + "(" + name + ")";
+            if (!columnIterator.hasNext()) {
+            } else {
+                out = out + " ,";
+            }
+        }
+
+        out = out + ") AS " + ObjectProcessing.ATTR_MODIFIED_LATEST + " ";
+
+        return out;
+    }
+
+    public String buildSyncTokenQuery() {
+        asSyncQuery = true;
+        String statementString = build();
+
+        statementString = "SELECT " + _MAX + "(" + ObjectProcessing.ATTR_MODIFIED_LATEST + ")" + " FROM ("
+                + statementString + ")";
+        statementString = statementString + "AS time_max";
+
+        return statementString;
+    }
+
+    public boolean isUseFullAlias() {
+        return useFullAlias;
+    }
+
+    public void setUseFullAlias(boolean useFullAlias) {
+        this.useFullAlias = useFullAlias;
+    }
+
+    public void setOrderByASC(Set<String> orderByASC) {
+        this.orderByASC = orderByASC;
+    }
+
+    public void setAsSyncQuery(boolean asSyncQuery) {
+        this.asSyncQuery = asSyncQuery;
+    }
+
+    public void setInStatement(Map<String, Set<String>> inStatement) {
+        this.inStatement = inStatement;
+    }
+
+
 }

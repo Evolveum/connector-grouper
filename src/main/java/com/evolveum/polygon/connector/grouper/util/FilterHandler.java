@@ -20,9 +20,7 @@ import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.*;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery> {
 
@@ -67,7 +65,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
         Attribute attr = containsAllValuesFilter.getAttribute();
         String snippet = processStringFilter(attr, EQUALS_OP, r);
-        r.setQuery(snippet);
+        r.setCurrentQuerySnippet(snippet);
 
         return r;
     }
@@ -80,7 +78,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
         String snippet = processStringFilter(attr, EQUALS_OP, r);
 
-        r.setQuery(snippet);
+        r.setCurrentQuerySnippet(snippet);
 
         return r;
     }
@@ -92,7 +90,17 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
     @Override
     public ResourceQuery visitGreaterThanFilter(ResourceQuery r, GreaterThanFilter greaterThanFilter) {
-        return null;
+
+        LOG.ok("Processing through GREATER_THAN filter expression");
+
+        Attribute attr = greaterThanFilter.getAttribute();
+
+        String snippet = processStringFilter(attr, GREATER_OP, r);
+
+        r.setCurrentQuerySnippet(snippet);
+
+        return r;
+
     }
 
     @Override
@@ -118,7 +126,16 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
     @Override
     public ResourceQuery visitOrFilter(ResourceQuery r, OrFilter orFilter) {
-        return null;
+
+        LOG.ok("Processing through OR filter expression");
+
+        Collection<Filter> filters = orFilter.getFilters();
+
+        processCompositeFilter(filters, OR_OP, r);
+
+
+        return r;
+
     }
 
     @Override
@@ -154,6 +171,8 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                 LOG.error("Unexpected error, attribute {0} without a value.", name);
             }
 
+            //TODO
+            LOG.ok("The value of the filter attribute: {0}", singleValue);
 
             name = evaluateNonNativeAttributeNames(r, name);
 
@@ -164,21 +183,42 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                 String tableName = iterator.next();
                 Map<String, Class> columns = tableAndcolumns.get(tableName);
 
-                if (columns.containsKey(name)) {
+                String attrName;
 
-                    wrappedValue = wrapValue(columns, name, singleValue);
-                    name = tableName + "." + name;
-                    break;
+                if (name.contains(".")) {
+                    String[] nameParts = name.split("\\.");
+                    String tableNamePart = nameParts[0];
+
+                    if (!tableName.equals(tableNamePart)) {
+                        continue;
+                    }
+
+                    attrName = nameParts[1];
+
                 } else {
 
+                    attrName = name;
+                }
+
+                if (columns.containsKey(name) || attrName != null && columns.containsKey(attrName)) {
+
+                    LOG.ok("Original attribute name value: {0}", name);
+                    LOG.ok("Wrapping the value {0}, and filter construction for the attribute {1} of the table {2}",
+                            singleValue, attrName, tableName);
+
+                    wrappedValue = wrapValue(columns, attrName, singleValue);
+
+                    LOG.ok("Wrapped attribute name value: {0}", wrappedValue);
+                    name = name.contains(".") ? name : tableName + "." + name;
+                    break;
+                } else {
                     if (!iterator.hasNext()) {
 
                         throw new ConnectorException("Unexpected exception in string filter processing," +
-                                " during the processing of the parameter: " + name);
+                                " during the processing of the parameter: " + name + " for the table: " + tableName);
                     }
                 }
             }
-
             query.append(name);
             query.append(_PADDING);
             query.append(operator);
@@ -186,6 +226,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
             query.append(wrappedValue);
         }
 
+        LOG.ok("Query snippet value: {0}", query);
         return query.toString();
     }
 
@@ -235,6 +276,17 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
         }
 
         return name;
+    }
+
+    private void processCompositeFilter(Collection<Filter> filters, String op, ResourceQuery r) {
+
+        ResourceQuery query = new ResourceQuery(r.getObjectClass(), r.getColumnInformation());
+
+        for (Filter filter : filters) {
+
+                r.add(filter.accept(this, query), op);
+        }
+
     }
 
     private String wrapValue(Map<String, Class> columns, String name, String value) {
