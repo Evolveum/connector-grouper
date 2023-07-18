@@ -43,7 +43,7 @@ public class SchemaTranslator {
         groupProcessing.buildObjectClass(schemaBuilder, configuration);
         userProcessing.buildObjectClass(schemaBuilder, configuration);
 
-        // TODO schema limitation ? Maybe useful in list all
+
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class);
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes(), SearchOp.class);
 

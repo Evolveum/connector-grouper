@@ -75,8 +75,6 @@ public class SubjectProcessing extends ObjectProcessing {
         ObjectClassInfoBuilder subjectObjClassBuilder = new ObjectClassInfoBuilder();
         subjectObjClassBuilder.setType(SUBJECT_NAME);
 
-
-        // TODO comment up
         //Read-only,
         AttributeInfoBuilder id = new AttributeInfoBuilder(Name.NAME);
         id.setRequired(true).setType(String.class).setCreateable(false).setUpdateable(false).setReadable(true)
@@ -108,7 +106,7 @@ public class SubjectProcessing extends ObjectProcessing {
                 AttributeInfoBuilder extAttr = new AttributeInfoBuilder(attr);
                 extAttr.setRequired(false).setType(String.class).setMultiValued(false)
                         .setCreateable(false).setUpdateable(false).setReadable(true)
-                        //TODO should this be returned by default
+
                         .setReturnedByDefault(false);
 
                 subjectObjClassBuilder.addAttributeInfo(extAttr.build());
@@ -236,8 +234,11 @@ public class SubjectProcessing extends ObjectProcessing {
 
         } catch (SQLException e) {
 
-            // TODO
-            throw new RuntimeException(e);
+            String errMessage = "Exception occurred during the Execute query operation while processing the query: "
+                    + query + ". The object class being handled: " + O_CLASS + ". And evaluating the filter: " + filter;
+
+            throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
+
         }
     }
 
@@ -447,8 +448,12 @@ public class SubjectProcessing extends ObjectProcessing {
             }
 
         } catch (SQLException e) {
-            //TODO
-            throw new RuntimeException(e);
+
+            String errMessage = "Exception occurred during the Sync (liveSync) operation. " +
+                    "The object class being handled: " + O_CLASS + ". While evaluating the token: " + tokenVal;
+
+            throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
+
         }
 
     }
@@ -497,8 +502,12 @@ public class SubjectProcessing extends ObjectProcessing {
             }
 
         } catch (SQLException e) {
-            //TODO
-            throw new RuntimeException(e);
+
+            String errMessage = "Exception occurred during the Get Latest Sync Token operation." +
+                    "The object class being handled: " + O_CLASS;
+
+            throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
+
         }
 
         throw new ConnectorException("Latest sync token could not be fetched.");
@@ -508,7 +517,7 @@ public class SubjectProcessing extends ObjectProcessing {
                                                                   OperationOptions operationOptions, Connection connection) {
 
         QueryBuilder queryBuilder;
-        //TODO clean up
+
         Set<String> idSet = new LinkedHashSet<>();
         for (String identifier : notDeletedObject.keySet()) {
 
@@ -596,20 +605,18 @@ public class SubjectProcessing extends ObjectProcessing {
             }
 
             if (objects.isEmpty()) {
-                LOG.ok("Empty object set in sync op");
-            } else {
-                for (String objectName : objects.keySet()) {
-
-                    LOG.info("The object name: {0}", objectName);
-
-                    LOG.info("The object: {0}", objects.get(objectName).toString());
-                }
+                LOG.ok("Empty 'CREATE_OR_UPDATE' object set returned");
             }
 
             return objects;
         } catch (SQLException e) {
-            //TODO
-            throw new RuntimeException(e);
+
+            String errMessage = "Exception occurred during the Sync (liveSync) operation. " +
+                    "The object class being handled: " + O_CLASS + ". Evaluation interrupted while processing objects" +
+                    "from the CREATE_OR_UPDATE set.";
+
+            throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
+
         }
     }
 

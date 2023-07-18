@@ -192,8 +192,11 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
                 return processing.fetchExtensionSchema(grouperConnection.getConnection());
 
             } catch (SQLException e) {
-                // TODO
-                throw new RuntimeException(e);
+
+                String errMessage = "Exception occurred while fetching the extension attributes for dynamic schema " +
+                        "evaluation. The object class being handled: " + oClass;
+
+                throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
             }
 
         } else if (oClass.equals(SubjectProcessing.O_CLASS)) {
@@ -204,8 +207,10 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
                 return processing.fetchExtensionSchema(grouperConnection.getConnection());
 
             } catch (SQLException e) {
-                // TODO
-                throw new RuntimeException(e);
+                String errMessage = "Exception occurred while fetching the extension attributes for dynamic schema " +
+                        "evaluation. The object class being handled: " + oClass;
+
+                throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
             }
 
         } else {

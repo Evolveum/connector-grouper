@@ -77,11 +77,12 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
                     "validation.");
         }
 
-        if (connectionValidTimeout == 10) {
+        if (excludeDeletedObjects == true) {
 
-            LOG.info("Connection validation timeout will be used with the value 10 seconds for connection" +
-                    "validation.");
+            LOG.info("Deleted object 'rows' are excluded from object lookup and searches. Any object (or related row)" +
+                    "marked as 'deleted=T' will be omitted from the result set.");
         }
+
 
         if (!parameters.isEmpty()) {
 
@@ -196,8 +197,6 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.excludeDeletedObjects = excludeDeletedObjects;
     }
 
-    /// TODO config property to specify dynamic schema scan pool
-
     @Override
     public void release() {
 
@@ -209,5 +208,6 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         host = null;
         extendedSubjectProperties = null;
         extendedGroupProperties = null;
+        excludeDeletedObjects = true;
     }
 }
