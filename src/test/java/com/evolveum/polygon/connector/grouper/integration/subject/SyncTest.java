@@ -29,7 +29,6 @@ public class SyncTest extends CommonTestClass {
     @Test()
     public void syncTest() {
 
-        //OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME);
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
         grouperConnector.init(grouperConfiguration);

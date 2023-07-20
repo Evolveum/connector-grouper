@@ -17,10 +17,8 @@
 package com.evolveum.polygon.connector.grouper.util;
 
 import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
-import com.evolveum.polygon.connector.grouper.GrouperConnection;
 import com.evolveum.polygon.connector.grouper.GrouperConnector;
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.OperationOptionInfoBuilder;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.Schema;
@@ -35,7 +33,6 @@ public class SchemaTranslator {
     public Schema generateSchema(GrouperConfiguration configuration){
         LOG.info("Generating schema object");
 
-
         SchemaBuilder schemaBuilder = new SchemaBuilder(GrouperConnector.class);
         GroupProcessing groupProcessing = new GroupProcessing(configuration);
         SubjectProcessing userProcessing = new SubjectProcessing(configuration);
@@ -43,21 +40,9 @@ public class SchemaTranslator {
         groupProcessing.buildObjectClass(schemaBuilder, configuration);
         userProcessing.buildObjectClass(schemaBuilder, configuration);
 
-
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class);
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes(), SearchOp.class);
 
         return schemaBuilder.build();
-    }
-
-    public Set<String> getAttributesToGet(String type, OperationOptions options) {
-
-        Set<String> attributesToGet = new HashSet<>();
-        if (options.getAttributesToGet() != null) {
-            for (String a : options.getAttributesToGet()) {
-                attributesToGet.add(a);
-            }
-        }
-        return attributesToGet;
     }
 }

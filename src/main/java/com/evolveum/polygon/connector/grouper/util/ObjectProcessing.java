@@ -102,8 +102,7 @@ public abstract class ObjectProcessing {
 
         } else {
             grouperObject = new GrouperObject();
-//            throw new ConnectorException("Unexpected exception while building object, object builder nor " +
-//                    "object class present in method invocation.");
+
         }
 
 
@@ -146,7 +145,6 @@ public abstract class ObjectProcessing {
 
                 }
 
-
             } else if (name_name != null && name.equals(name_name)) {
 
                 if (tableName != null && getMainTableName().equals(tableName)) {
@@ -173,7 +171,6 @@ public abstract class ObjectProcessing {
                 etxAttrValue = resultSet.getString(i);
                 LOG.ok("Addition of extension value attribute, the value {0}", etxAttrValue);
             } else if (ATTR_DELETED.equals(name)) {
-
 
                 String deleted = resultSet.getString(i);
 
@@ -232,9 +229,7 @@ public abstract class ObjectProcessing {
 
                         LOG.ok("Addition of Long type attribute for attribute from column with name {0}", origName);
 
-
                         Long resVal = resultSet.getLong(i);
-
 
                         if (name.equals(ATTR_MODIFIED)) {
 
@@ -273,7 +268,6 @@ public abstract class ObjectProcessing {
         if (extAttrName != null) {
             if (configuration.getExcludeDeletedObjects()) {
 
-
                 if (saturateExtensionAttribute) {
 
                     grouperObject.addAttribute(extAttrName, etxAttrValue, multiValuedAttributesCatalogue);
@@ -288,14 +282,12 @@ public abstract class ObjectProcessing {
 
             if (configuration.getExcludeDeletedObjects()) {
 
-                LOG.ok("conf exclude 1");
                 if (saturateMembership) {
-                    LOG.ok("conf exclude saturate");
+
                     grouperObject.addAttribute(getMemberShipAttributeName(), membershipColumnValue,
                             multiValuedAttributesCatalogue);
                 }
             } else {
-                LOG.ok("conf exclude 2");
                 grouperObject.addAttribute(extAttrName, etxAttrValue, multiValuedAttributesCatalogue);
             }
         }
@@ -337,10 +329,6 @@ public abstract class ObjectProcessing {
         return builder;
     }
 
-//    protected abstract GrouperObject populateOptionalAttributes(ResultSet result, GrouperObject ob,
-//                                                                GrouperConfiguration configuration)
-//            throws SQLException;
-
     protected Set<String> getAttributesToGet(OperationOptions operationOptions) {
         if (operationOptions != null && operationOptions.getAttributesToGet() != null) {
 
@@ -352,7 +340,6 @@ public abstract class ObjectProcessing {
 
     protected abstract void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler,
                                  OperationOptions operationOptions, Connection connection);
-
 
     public abstract SyncToken getLatestSyncToken(Connection connection);
 }

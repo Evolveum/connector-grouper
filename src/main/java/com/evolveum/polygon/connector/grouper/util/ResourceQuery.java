@@ -25,26 +25,13 @@ public class ResourceQuery {
     private static final Log LOG = Log.getLog(ResourceQuery.class);
     private ObjectClass objectClass;
     private Map<String, Map<String, Class>> columnInformation;
-
     private String currentQuerySnippet = null;
-
-    private String query = null;
-
-    private String compositeOperator = null;
 
     public ResourceQuery(ObjectClass objectClass, Map<String, Map<String, Class>> columnInformation) {
 
         this.objectClass = objectClass;
         this.columnInformation = columnInformation;
 
-    }
-
-    public ResourceQuery(ObjectClass objectClass, Map<String, Map<String, Class>> columnInformation,
-                         String compositeOperator) {
-
-        this.objectClass = objectClass;
-        this.columnInformation = columnInformation;
-        this.compositeOperator = compositeOperator;
     }
 
     public ObjectClass getObjectClass() {
@@ -76,9 +63,10 @@ public class ResourceQuery {
         LOG.ok("Query builder value after augmentation: {0}", getCurrentQuerySnippet());
     }
 
-    public String getQuery(){
+    public void addOperator(String operator){
 
-        return "";
+        setCurrentQuerySnippet( operator + " (" + getCurrentQuerySnippet() + ")");
+
     }
 
 }

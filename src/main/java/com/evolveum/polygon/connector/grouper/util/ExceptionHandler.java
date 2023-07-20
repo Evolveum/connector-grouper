@@ -24,23 +24,22 @@ import java.util.List;
 
 public class ExceptionHandler {
 
-    private static final String MSG_EXP_DEFAULT = "Evaluation exited with an exception.";
     private static final Log LOG = Log.getLog(ExceptionHandler.class);
 
     public RuntimeException evaluateAndHandleException(Exception e, Boolean logErr, Boolean wrap,
-                                           String message) {
+                                                       String message) {
 
         if (e instanceof SQLException) {
 
             return handleBasedOnSQLState((SQLException) e, logErr, wrap, message);
         }
 
-            LOG.ok("Default exception handling for ConnectorException.");
-            return new ConnectorException(e);
+        LOG.ok("Default exception handling for ConnectorException.");
+        return new ConnectorException(e);
     }
 
     private RuntimeException handleBasedOnSQLState(SQLException e, Boolean logErr, Boolean wrap,
-                                       String message) {
+                                                   String message) {
         String sqlState = e.getSQLState();
 
         List<String> connectionFailed = List.of("53300", "HV00N", "08000", "08003", "08006", "08001", "08004");
@@ -78,7 +77,7 @@ public class ExceptionHandler {
                 return checkIfLogAndReturn(new OperationTimeoutException(e), e,
                         logErr, message);
 
-            } else if (permissionDenied.contains(sqlState)){
+            } else if (permissionDenied.contains(sqlState)) {
 
                 return checkIfLogAndReturn(new PermissionDeniedException(e), e,
                         logErr, message);
@@ -92,7 +91,7 @@ public class ExceptionHandler {
         if (!wrap) {
 
             LOG.ok("Default sqlState exception handling for ConnectorException");
-           return checkIfLogAndReturn(new ConnectorException(e), e, logErr,
+            return checkIfLogAndReturn(new ConnectorException(e), e, logErr,
                     message);
         } else {
 
@@ -108,10 +107,10 @@ public class ExceptionHandler {
 
         if (!logErr) {
 
-            LOG.ok(exceptionToConsume, errMessage);
+            LOG.ok(errMessage + " " + exceptionToConsume.getLocalizedMessage());
 
         } else {
-            LOG.error(exceptionToConsume, errMessage);
+            LOG.error(errMessage + " " + exceptionToConsume.getLocalizedMessage());
         }
 
         return exceptionToThrow;

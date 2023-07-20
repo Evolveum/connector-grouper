@@ -113,9 +113,8 @@ public class QueryBuilder {
             LOG.ok("Starting the parsing of join map.");
 
             for (Map<String, String> selectTableJoinMap : joinPair.keySet()) {
-                //Map<String, String> joinParamTable = selectTableJoinMap;
+
                 String selectTableJoinParam = joinPair.get(selectTableJoinMap);
-                //Map<String, String> joinParamTable = joinPair.get(selectTableJoinParam);
 
                 LOG.ok("Parsing join map in regards to join parameter {0} of the table {1}.", selectTableJoinParam,
                         selectTable);
@@ -221,7 +220,6 @@ public class QueryBuilder {
 
     private String select(Map<String, Map<String, Class>> tablesAndColumns, String selectTable) {
 
-
         if (selectTable != null && !selectTable.isEmpty()) {
         } else {
 
@@ -325,10 +323,6 @@ public class QueryBuilder {
         statementString = statementString + "AS time_max";
 
         return statementString;
-    }
-
-    public boolean isUseFullAlias() {
-        return useFullAlias;
     }
 
     public void setUseFullAlias(boolean useFullAlias) {

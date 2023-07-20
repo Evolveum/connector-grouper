@@ -51,12 +51,28 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
     @Override
     public ResourceQuery visitAndFilter(ResourceQuery r, AndFilter andFilter) {
-        return null;
+
+        LOG.ok("Processing through AND filter expression");
+
+        Collection<Filter> filters = andFilter.getFilters();
+
+        processCompositeFilter(filters, AND_OP, r);
+
+
+        return r;
     }
 
     @Override
     public ResourceQuery visitContainsFilter(ResourceQuery r, ContainsFilter containsFilter) {
-        return null;
+        LOG.ok("Processing through CONTAINS filter expression");
+
+        Attribute attr = containsFilter.getAttribute();
+
+        String snippet = processStringFilter(attr, _LIKE, r, containsFilter);
+
+        r.setCurrentQuerySnippet(snippet);
+
+        return r;
     }
 
     @Override
@@ -85,7 +101,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
     @Override
     public ResourceQuery visitExtendedFilter(ResourceQuery r, Filter filter) {
-        return null;
+        throw new ConnectorException("Filter 'EXTENDED FILTER' not implemented by the connector. ");
     }
 
     @Override
@@ -106,22 +122,56 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
     @Override
     public ResourceQuery visitGreaterThanOrEqualFilter(ResourceQuery r,
                                                        GreaterThanOrEqualFilter greaterThanOrEqualFilter) {
-        return null;
+        LOG.ok("Processing through GREATER_THAN_OR_EQUAL filter expression");
+
+        Attribute attr = greaterThanOrEqualFilter.getAttribute();
+
+        String snippet = processStringFilter(attr, GREATER_OR_EQUALS_OP, r);
+
+        r.setCurrentQuerySnippet(snippet);
+
+        return r;
     }
 
     @Override
     public ResourceQuery visitLessThanFilter(ResourceQuery r, LessThanFilter lessThanFilter) {
-        return null;
+        LOG.ok("Processing through LESS THAN filter expression");
+
+        Attribute attr = lessThanFilter.getAttribute();
+
+        String snippet = processStringFilter(attr, LESS_OP, r);
+
+        r.setCurrentQuerySnippet(snippet);
+
+        return r;
     }
 
     @Override
     public ResourceQuery visitLessThanOrEqualFilter(ResourceQuery r, LessThanOrEqualFilter lessThanOrEqualFilter) {
-        return null;
+
+        LOG.ok("Processing through LESS_THAN_OR_EQUAL filter expression");
+
+        Attribute attr = lessThanOrEqualFilter.getAttribute();
+
+        String snippet = processStringFilter(attr, LESS_OR_EQ_OP, r);
+
+        r.setCurrentQuerySnippet(snippet);
+
+        return r;
     }
 
     @Override
     public ResourceQuery visitNotFilter(ResourceQuery r, NotFilter notFilter) {
-        return null;
+
+        LOG.ok("Processing through NOT filter expression");
+
+        Collection<Filter> filters = Collections.singleton(notFilter.getFilter());
+
+        processCompositeFilter(filters, NOT_OP, r);
+
+        r.addOperator(NOT_OP);
+
+        return r;
     }
 
     @Override
@@ -140,20 +190,44 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
     @Override
     public ResourceQuery visitStartsWithFilter(ResourceQuery r, StartsWithFilter startsWithFilter) {
-        return null;
+
+        LOG.ok("Processing through STARTS WITH filter expression");
+
+        Attribute attr = startsWithFilter.getAttribute();
+
+        String snippet = processStringFilter(attr, _LIKE, r, startsWithFilter);
+
+        r.setCurrentQuerySnippet(snippet);
+
+        return r;
     }
 
     @Override
     public ResourceQuery visitEndsWithFilter(ResourceQuery r, EndsWithFilter endsWithFilter) {
-        return null;
+
+        LOG.ok("Processing through ENDS WITH filter expression");
+
+        Attribute attr = endsWithFilter.getAttribute();
+
+        String snippet = processStringFilter(attr, _LIKE, r, endsWithFilter);
+
+        r.setCurrentQuerySnippet(snippet);
+
+        return r;
+
     }
 
     @Override
     public ResourceQuery visitEqualsIgnoreCaseFilter(ResourceQuery r, EqualsIgnoreCaseFilter equalsIgnoreCaseFilter) {
-        return null;
+        throw new ConnectorException("Filter 'EQUALS IGNORE CASE FILTER' not implemented by the connector. ");
     }
 
     private String processStringFilter(Attribute attr, String operator, ResourceQuery r) {
+
+        return processStringFilter(attr, operator, r, null);
+    }
+
+    private String processStringFilter(Attribute attr, String operator, ResourceQuery r, Filter filter) {
 
         StringBuilder query = new StringBuilder();
 
@@ -171,14 +245,12 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                 LOG.error("Unexpected error, attribute {0} without a value.", name);
             }
 
-            //TODO
-            LOG.ok("The value of the filter attribute: {0}", singleValue);
-
             name = evaluateNonNativeAttributeNames(r, name);
 
             Map<String, Map<String, Class>> tableAndcolumns = r.getColumnInformation();
             String wrappedValue = null;
             Iterator<String> iterator = tableAndcolumns.keySet().iterator();
+
             while (iterator.hasNext()) {
                 String tableName = iterator.next();
                 Map<String, Class> columns = tableAndcolumns.get(tableName);
@@ -206,7 +278,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                     LOG.ok("Wrapping the value {0}, and filter construction for the attribute {1} of the table {2}",
                             singleValue, attrName, tableName);
 
-                    wrappedValue = wrapValue(columns, attrName, singleValue);
+                    wrappedValue = wrapValue(columns, attrName, singleValue, filter);
 
                     LOG.ok("Wrapped attribute name value: {0}", wrappedValue);
                     name = name.contains(".") ? name : tableName + "." + name;
@@ -219,6 +291,17 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                     }
                 }
             }
+
+
+            if (filter != null) {
+
+                if (filter instanceof ContainsFilter || filter instanceof StartsWithFilter ||
+                        filter instanceof EndsWithFilter) {
+
+                    name = name + "::TEXT";
+                }
+            }
+
             query.append(name);
             query.append(_PADDING);
             query.append(operator);
@@ -229,6 +312,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
         LOG.ok("Query snippet value: {0}", query);
         return query.toString();
     }
+
 
     private String evaluateNonNativeAttributeNames(ResourceQuery r, String name) {
 
@@ -282,17 +366,37 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
         ResourceQuery query = new ResourceQuery(r.getObjectClass(), r.getColumnInformation());
 
-        for (Filter filter : filters) {
+        Iterator<Filter> filterIterator = filters.iterator();
 
-                r.add(filter.accept(this, query), op);
+        while (filterIterator.hasNext()) {
+
+            Filter filter = filterIterator.next();
+            r.add(filter.accept(this, query), op);
+
         }
 
     }
 
-    private String wrapValue(Map<String, Class> columns, String name, String value) {
+
+    private String wrapValue(Map<String, Class> columns, String name, String value, Filter filter) {
         LOG.ok("Evaluating value wrapper for the property: {0}", name);
 
+        if (filter != null) {
 
+            if (filter instanceof ContainsFilter) {
+
+                return _S_COL_VALUE_WRAPPER + "%" + value + "%" + _S_COL_VALUE_WRAPPER;
+
+            } else if (filter instanceof StartsWithFilter) {
+
+                return _S_COL_VALUE_WRAPPER + value + "%" + _S_COL_VALUE_WRAPPER;
+
+            } else if (filter instanceof EndsWithFilter) {
+
+                return _S_COL_VALUE_WRAPPER + "%" + value + _S_COL_VALUE_WRAPPER;
+            }
+
+        }
         if (columns.containsKey(name)) {
 
             Class type = columns.get(name);

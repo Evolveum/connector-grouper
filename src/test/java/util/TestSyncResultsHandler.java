@@ -28,10 +28,6 @@ public class TestSyncResultsHandler implements SyncResultsHandler {
     @Override
     public boolean handle(SyncDelta syncDelta) {
 
-//        if (syncDelta.getObject() != null) {
-//
-//            return super.handle(syncDelta.getObject());
-//        } else
             if (syncDelta != null) {
             return uidResult.add(syncDelta);
         }

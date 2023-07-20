@@ -16,13 +16,11 @@
 
 package com.evolveum.polygon.connector.grouper.integration.subject;
 
+import org.identityconnectors.framework.common.objects.filter.*;
 import util.CommonTestClass;
 import util.TestSearchResultsHandler;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
-import org.identityconnectors.framework.common.objects.filter.ContainsAllValuesFilter;
-import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
-import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -41,8 +39,6 @@ public class FilteringTest extends CommonTestClass {
 
         grouperConnector.executeQuery(objectClassSubject, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
-
-
 
         for (ConnectorObject result : results) {
 
@@ -63,7 +59,6 @@ public class FilteringTest extends CommonTestClass {
 
         grouperConnector.executeQuery(objectClassSubject, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
-
 
         for (ConnectorObject result : results) {
 
@@ -123,6 +118,272 @@ public class FilteringTest extends CommonTestClass {
 
             Assert.assertEquals(result.getUid().getUidValue(), "103");
         }
+    }
+
+    @Test()
+    public void containsUIDAndAttributesToGet() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        ContainsFilter filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "1"));
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+
+            if (uid.contains("1")) {
+            } else {
+                isOK = false;
+            }
+
+        }
+
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void startsWithUIDAndAttributesToGet() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        StartsWithFilter filter = (StartsWithFilter) FilterBuilder.startsWith(AttributeBuilder.build(Uid.NAME,
+                "1"));
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+
+            if (uid.charAt(0) == '1') {
+            } else {
+                isOK = false;
+            }
+
+        }
+
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void endsWithUIDAndAttributesToGet() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        EndsWithFilter filter = (EndsWithFilter) FilterBuilder.endsWith(AttributeBuilder.build(Uid.NAME,
+                "7"));
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+            int n = uid.length();
+
+            if (uid.charAt(n - 1) == '7') {
+            } else {
+                isOK = false;
+            }
+
+        }
+
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void notEndsWithUIDAndAttributesToGet() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        EndsWithFilter filter = (EndsWithFilter) FilterBuilder.endsWith(AttributeBuilder.build(Uid.NAME,
+                "2"));
+
+        NotFilter notFilter = (NotFilter) FilterBuilder.not(filter);
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), notFilter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+            int n = uid.length();
+
+            if (uid.charAt(n - 1) != '2') {
+            } else {
+                isOK = false;
+            }
+
+        }
+
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void endsWithStartsWithOrUIDAndAttributesToGet() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        EndsWithFilter ewfilter = (EndsWithFilter) FilterBuilder.endsWith(AttributeBuilder.build(Uid.NAME,
+                "7"));
+
+        StartsWithFilter swfilter = (StartsWithFilter) FilterBuilder.startsWith(AttributeBuilder.build(Uid.NAME,
+                "8"));
+
+        OrFilter orFilter = (OrFilter) FilterBuilder.or(ewfilter, swfilter);
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), orFilter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+            int n = uid.length();
+
+            if (uid.charAt(n - 1) == '7') {
+            } else {
+                isOK = false;
+            }
+
+            if (uid.charAt(0) == '8') {
+            } else {
+                isOK = false;
+            }
+
+        }
+
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void endsWithStartsWithANDUIDAndAttributesToGet() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        EndsWithFilter ewfilter = (EndsWithFilter) FilterBuilder.endsWith(AttributeBuilder.build(Uid.NAME,
+                "7"));
+
+        StartsWithFilter swfilter = (StartsWithFilter) FilterBuilder.startsWith(AttributeBuilder.build(Uid.NAME,
+                "8"));
+
+        AndFilter andFilter = (AndFilter) FilterBuilder.and(ewfilter, swfilter);
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), andFilter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+            int n = uid.length();
+
+            if (uid.charAt(n - 1) == '7') {
+            } else {
+                isOK = false;
+            }
+
+            if (uid.charAt(0) == '8') {
+            } else {
+                isOK = false;
+            }
+
+        }
+
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void andOrContainsUIDAndAttributesToGet() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        ContainsFilter c1filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "1"));
+        ContainsFilter c2filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "0"));
+        ContainsFilter c3filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "87"));
+
+        AndFilter a1Filter = (AndFilter) FilterBuilder.and(c1filter, c2filter);
+
+        OrFilter orFilter = (OrFilter) FilterBuilder.or(a1Filter, c3filter);
+
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), orFilter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+            if ((uid.contains("1") && uid.contains("0")) || uid.contains("87")) {
+
+            } else {
+                isOK = false;
+            }
+
+        }
+        Assert.assertTrue(isOK);
     }
 
     @Test()

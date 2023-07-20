@@ -391,7 +391,7 @@ public class SubjectProcessing extends ObjectProcessing {
             }
 
             if (objects.isEmpty()) {
-                LOG.ok("Empty object set in sync op");
+                LOG.ok("Empty object set in sync op.");
             } else {
 
                 Map<String, GrouperObject> notDeletedObject = new LinkedHashMap<>();
@@ -432,7 +432,7 @@ public class SubjectProcessing extends ObjectProcessing {
                     } else {
 
                         builder.setDeltaType(SyncDeltaType.DELETE);
-                        LOG.ok("### {0} is deleted", id);
+                        LOG.ok("{0} is deleted", id);
                         builder.setUid(new Uid(id));
                         builder.setToken(new SyncToken(objectPartial.getLatestTimestamp()));
 
@@ -480,7 +480,7 @@ public class SubjectProcessing extends ObjectProcessing {
         String query = queryBuilder.buildSyncTokenQuery();
 
 
-        ResultSet result = null;
+        ResultSet result;
         try {
             PreparedStatement prepareStatement = connection.prepareStatement(query);
             result = prepareStatement.executeQuery();
@@ -564,7 +564,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
         String query = queryBuilder.build();
 
-        ResultSet result = null;
+        ResultSet result ;
 
         Map<String, GrouperObject> objects = new HashMap<>();
 
@@ -623,7 +623,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
     public Set<String> fetchExtensionSchema(Connection connection) throws SQLException {
 
-        ResultSet result = null;
+        ResultSet result;
         QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, TABLE_SU_EXTENSION_NAME, 1000);
         String query = queryBuilder.build();
 

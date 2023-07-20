@@ -21,7 +21,6 @@ import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
-import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.identityconnectors.framework.common.objects.filter.GreaterThanFilter;
@@ -84,8 +83,6 @@ public class GroupProcessing extends ObjectProcessing {
         ObjectClassInfoBuilder groupObjClassBuilder = new ObjectClassInfoBuilder();
         groupObjClassBuilder.setType(ObjectClass.GROUP_NAME);
 
-        //subjectObjClassBuilder.addAttributeInfo(OperationalAttributeInfos.ENABLE);
-        //subjectObjClassBuilder.addAttributeInfo(OperationalAttributeInfos.PASSWORD);
 
         //Read-only,
 
@@ -225,7 +222,7 @@ public class GroupProcessing extends ObjectProcessing {
             }
 
             if (objects.isEmpty()) {
-                LOG.ok("Empty object set execute query");
+                LOG.ok("Empty object set execute query.");
             } else {
                 for (String objectName : objects.keySet()) {
 
@@ -237,7 +234,7 @@ public class GroupProcessing extends ObjectProcessing {
                     if (configuration.getExcludeDeletedObjects()) {
                         if (go.isDeleted()) {
                             LOG.ok("Following object omitted from evaluation, because it's deleted" +
-                                    "identifier: {0} ; name: {1}.", go.getIdentifier(), go.getName());
+                                    ", identifier: "+ go.getIdentifier());
 
                             continue;
                         }
@@ -255,7 +252,7 @@ public class GroupProcessing extends ObjectProcessing {
         } catch (SQLException e) {
 
             String errMessage = "Exception occurred during the Execute query operation while processing the query: "
-                    + query + ". The object class being handled: " + O_CLASS + ". And evaluating the filter: " + filter;
+                    + query + ". The object class being handled: " + O_CLASS;
 
             throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
 
@@ -326,7 +323,8 @@ public class GroupProcessing extends ObjectProcessing {
             if (attrsToGet.contains(ATTR_MEMBERS)) {
 
                 greaterThanFilterMember = (GreaterThanFilter)
-                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME + "." + ATTR_MODIFIED,
+                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME
+                                        + "." + ATTR_MODIFIED,
                                 tokenVal));
 
                 tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, objectColumns);
@@ -370,7 +368,7 @@ public class GroupProcessing extends ObjectProcessing {
 
         String query = queryBuilder.build();
 
-        ResultSet result = null;
+        ResultSet result;
 
         Map<String, GrouperObject> objects = new LinkedHashMap<>();
         try {
@@ -414,7 +412,7 @@ public class GroupProcessing extends ObjectProcessing {
             }
 
             if (objects.isEmpty()) {
-                LOG.ok("Empty object set in sync op");
+                LOG.ok("Empty object set in sync op.");
             } else {
 
                 Map<String, GrouperObject> notDeletedObject = new LinkedHashMap<>();
@@ -424,11 +422,10 @@ public class GroupProcessing extends ObjectProcessing {
 
                     if (object.isDeleted()) {
 
-                        LOG.ok("### {0} is deleted", id);
+                        LOG.ok("{0} is deleted", id);
                     } else {
 
                         notDeletedObject.put(id, object);
-                        LOG.ok("### {0}", id);
                     }
                 }
 
@@ -453,11 +450,11 @@ public class GroupProcessing extends ObjectProcessing {
 
                         builder.setObject(objectBuilder.build());
 
-
                     } else {
 
                         builder.setDeltaType(SyncDeltaType.DELETE);
-                        LOG.ok("### {0} is deleted", id);
+                        LOG.ok("{0} is deleted", id);
+
                         builder.setUid(new Uid(id));
                         builder.setToken(new SyncToken(objectPartial.getLatestTimestamp()));
 
@@ -539,7 +536,6 @@ public class GroupProcessing extends ObjectProcessing {
     private Map<String, GrouperObject> fetchFullNonDeletedObjects(Map<String, GrouperObject> notDeletedObject,
                                                                   OperationOptions operationOptions,
                                                                   Connection connection) {
-
         QueryBuilder queryBuilder;
 
         Set<String> idSet = new LinkedHashSet<>();
@@ -588,7 +584,7 @@ public class GroupProcessing extends ObjectProcessing {
 
         String query = queryBuilder.build();
 
-        ResultSet result = null;
+        ResultSet result;
 
         Map<String, GrouperObject> objects = new HashMap<>();
 
@@ -623,7 +619,6 @@ public class GroupProcessing extends ObjectProcessing {
                         for (String attName : attrMap.keySet()) {
 
                             mapObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
-
                         }
 
                     } else {
@@ -631,18 +626,10 @@ public class GroupProcessing extends ObjectProcessing {
                         objects.put(go.getIdentifier(), go);
                     }
                 }
-
             }
 
             if (objects.isEmpty()) {
-                LOG.ok("Empty object set in sync op");
-            } else {
-                for (String objectName : objects.keySet()) {
-
-                    LOG.info("The object name: {0}", objectName);
-
-                    LOG.info("The object: {0}", objects.get(objectName).toString());
-                }
+                LOG.ok("Empty object set in sync op.");
             }
 
             return objects;
@@ -658,7 +645,7 @@ public class GroupProcessing extends ObjectProcessing {
 
     public Set<String> fetchExtensionSchema(Connection connection) throws SQLException {
 
-        ResultSet result = null;
+        ResultSet result;
         QueryBuilder queryBuilder = new QueryBuilder(O_CLASS, TABLE_GR_EXTENSION_NAME, 1000);
         String query = queryBuilder.build();
 

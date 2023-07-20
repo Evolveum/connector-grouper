@@ -32,7 +32,6 @@ public class SyncTest extends CommonTestClass {
     @Test()
     public void syncTest() {
 
-
         OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
         ObjectClass objectClassGroup = new ObjectClass(ObjectClass.GROUP_NAME);
         grouperConnector.init(grouperConfiguration);
@@ -40,7 +39,6 @@ public class SyncTest extends CommonTestClass {
 
         grouperConnector.sync(objectClassGroup, new SyncToken(1684824672269L),
                 handler, options);
-
 
         for (SyncDelta result : handler.getResult()) {
 
@@ -52,11 +50,9 @@ public class SyncTest extends CommonTestClass {
     @Test()
     public void latestSyncTokenTest() {
 
-
         OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
         ObjectClass objectClassGroup = new ObjectClass(ObjectClass.GROUP_NAME);
         grouperConnector.init(grouperConfiguration);
-
 
         SyncToken token = grouperConnector.getLatestSyncToken(objectClassGroup);
 
