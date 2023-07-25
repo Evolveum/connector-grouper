@@ -72,8 +72,9 @@ public class SubjectProcessing extends ObjectProcessing {
     public void buildObjectClass(SchemaBuilder schemaBuilder, GrouperConfiguration configuration) {
         LOG.info("Building object class definition for {0}", SUBJECT_NAME);
 
+        ObjectClass objectClass = new ObjectClass(SUBJECT_NAME);
         ObjectClassInfoBuilder subjectObjClassBuilder = new ObjectClassInfoBuilder();
-        subjectObjClassBuilder.setType(SUBJECT_NAME);
+        subjectObjClassBuilder.setType(objectClass.getObjectClassValue());
 
         //Read-only,
         AttributeInfoBuilder id = new AttributeInfoBuilder(Name.NAME);
@@ -114,6 +115,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
         }
         schemaBuilder.defineObjectClass(subjectObjClassBuilder.build());
+
     }
 
     public void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
@@ -564,7 +566,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
         String query = queryBuilder.build();
 
-        ResultSet result ;
+        ResultSet result;
 
         Map<String, GrouperObject> objects = new HashMap<>();
 
