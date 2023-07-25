@@ -30,7 +30,8 @@ import java.util.Set;
 
 public class SchemaTranslator {
     private static final Log LOG = Log.getLog(SchemaTranslator.class);
-    public Schema generateSchema(GrouperConfiguration configuration){
+
+    public Schema generateSchema(GrouperConfiguration configuration) {
         LOG.info("Generating schema object");
 
         SchemaBuilder schemaBuilder = new SchemaBuilder(GrouperConnector.class);
@@ -42,6 +43,14 @@ public class SchemaTranslator {
 
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class);
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes(), SearchOp.class);
+
+        //TODO paging
+        if (configuration.getEnableIdBasedPaging()) {
+
+            schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildPageSize());
+            schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildPagedResultsOffset());
+            schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildPagedResultsCookie());
+        }
 
         return schemaBuilder.build();
     }

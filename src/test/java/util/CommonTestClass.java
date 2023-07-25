@@ -45,6 +45,7 @@ public class CommonTestClass implements ObjectConstants {
         grouperConfiguration.setPort(parser.getPort());
         grouperConfiguration.setPassword(parser.getPassword());
         grouperConfiguration.setUserName(parser.getLogin());
+        grouperConfiguration.setEnableIdBasedPaging(parser.getEnableIdBasedPaging());
 
         if (parser.getValidTimeout() != null) {
             grouperConfiguration.setConnectionValidTimeout(parser.getValidTimeout());
@@ -75,10 +76,18 @@ public class CommonTestClass implements ObjectConstants {
 
     protected OperationOptions getDefaultOperationOptions(String objectClassName) {
 
-        return getDefaultOperationOptions(objectClassName, false);
+        return getDefaultOperationOptions(objectClassName, false, null,
+                null, null);
     }
 
     protected OperationOptions getDefaultOperationOptions(String objectClassName, Boolean extendedAttrsToGet) {
+
+        return getDefaultOperationOptions(objectClassName, extendedAttrsToGet, null,
+                null, null);
+    }
+
+    protected OperationOptions getDefaultOperationOptions(String objectClassName, Boolean extendedAttrsToGet
+            , String pageCookie, Integer pageOffset, Integer pageSize) {
 
         List<String> groupArray = CollectionUtil.newList(ATTR_NAME, ATTR_DISPLAY_NAME,
                 ATTR_DESCRIPTION);
@@ -116,6 +125,20 @@ public class CommonTestClass implements ObjectConstants {
 
         }
 
+        if (pageOffset != null) {
+
+            operationOptions.put(OperationOptions.OP_PAGED_RESULTS_OFFSET, pageOffset);
+        }
+
+        if (pageSize != null) {
+
+            operationOptions.put(OperationOptions.OP_PAGE_SIZE, pageSize);
+        }
+
+        if (pageCookie != null) {
+
+            operationOptions.put(OperationOptions.OP_PAGED_RESULTS_COOKIE, pageCookie);
+        }
 
         OperationOptions options = new OperationOptions(operationOptions);
 

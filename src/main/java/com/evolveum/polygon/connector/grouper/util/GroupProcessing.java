@@ -21,9 +21,8 @@ import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
-import org.identityconnectors.framework.common.objects.filter.Filter;
-import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
-import org.identityconnectors.framework.common.objects.filter.GreaterThanFilter;
+import org.identityconnectors.framework.common.objects.filter.*;
+import org.identityconnectors.framework.spi.SearchResultsHandler;
 
 import java.sql.*;
 import java.util.*;
@@ -43,7 +42,7 @@ public class GroupProcessing extends ObjectProcessing {
 
     protected Set<String> multiValuedAttributesCatalogue = new HashSet();
     protected Map<String, Class> columns = new HashMap<>();
-    private static final ObjectClass O_CLASS = ObjectClass.GROUP;
+    public static final ObjectClass O_CLASS = ObjectClass.GROUP;
 
     protected Map<String, Class> grMembershipColumns = Map.ofEntries(
             Map.entry(ATTR_GR_ID_IDX, Long.class),
@@ -168,6 +167,19 @@ public class GroupProcessing extends ObjectProcessing {
                     tablesAndColumns, TABLE_GR_NAME, joinMap, operationOptions);
         } else {
 
+            // TODO test omit deleted mechanism
+
+            if (configuration.getExcludeDeletedObjects()) {
+                if (filter != null) {
+                    EqualsFilter equalsFilter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(ATTR_DELETED,
+                            "F"));
+                    AndFilter andFilter = (AndFilter) FilterBuilder.and(equalsFilter, filter);
+                } else {
+                    filter = FilterBuilder.equalTo(AttributeBuilder.build(ATTR_DELETED,
+                            "F"));
+                }
+            }
+
             queryBuilder = new QueryBuilder(O_CLASS, filter, Map.of(TABLE_GR_NAME, columns),
                     TABLE_GR_NAME, operationOptions);
         }
@@ -220,10 +232,12 @@ public class GroupProcessing extends ObjectProcessing {
                 }
 
             }
-
+            String pseudoCookie = null;
             if (objects.isEmpty()) {
                 LOG.ok("Empty object set execute query.");
             } else {
+                Integer sizeS = objects.size();
+                Integer processed = 0;
                 for (String objectName : objects.keySet()) {
 
                     LOG.info("The object name: {0}", objectName);
@@ -234,19 +248,40 @@ public class GroupProcessing extends ObjectProcessing {
                     if (configuration.getExcludeDeletedObjects()) {
                         if (go.isDeleted()) {
                             LOG.ok("Following object omitted from evaluation, because it's deleted" +
-                                    ", identifier: "+ go.getIdentifier());
+                                    ", identifier: " + go.getIdentifier());
 
                             continue;
                         }
                     }
 
                     ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+
+                    pseudoCookie = go.getIdentifier();
                     if (!handler.handle(co.build())) {
+
+                        if (handler instanceof SearchResultsHandler) {
+
+                            LOG.ok("Handling results with pseudoCookie: {0}", pseudoCookie);
+                            LOG.ok("Remaining page results: {0}", sizeS - processed);
+
+                            SearchResult searchResult = new SearchResult(pseudoCookie,
+                                    sizeS - processed);
+                            ((SearchResultsHandler) handler).handleResult(searchResult);
+                        }
 
                         LOG.warn("Result handling interrupted by handler!");
                         break;
                     }
+                    processed++;
+                }
+                if (handler instanceof SearchResultsHandler) {
 
+                    LOG.ok("Handling results with pseudoCookie: {0}", pseudoCookie);
+                    LOG.ok("Remaining page results: {0}", sizeS - processed);
+//                    SearchResult searchResult = new SearchResult(pseudoCookie, sizeS - processed,
+//                            true);
+                    SearchResult searchResult = new SearchResult(pseudoCookie, -1);
+                    ((SearchResultsHandler) handler).handleResult(searchResult);
                 }
             }
         } catch (SQLException e) {

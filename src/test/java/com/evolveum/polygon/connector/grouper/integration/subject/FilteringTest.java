@@ -49,6 +49,29 @@ public class FilteringTest extends CommonTestClass {
         }
     }
 
+
+    //TODO test
+    @Test()
+    public void fetchAllPaged() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, false, "87",
+                0, 20);
+        ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        grouperConnector.executeQuery(objectClassSubject, null, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
+    }
+
     @Test()
     public void fetchAllWithAttrsToGet() {
 

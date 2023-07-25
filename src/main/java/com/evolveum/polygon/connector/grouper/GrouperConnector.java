@@ -150,6 +150,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
         Integer connectionValidTimeout = configuration.getConnectionValidTimeout();
         Boolean excludeDeletedObjects = configuration.getExcludeDeletedObjects();
+        Boolean enableIdBasedPaging = configuration.getEnableIdBasedPaging();
 
         if (connectionValidTimeout != null) {
 
@@ -166,6 +167,14 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         } else {
 
             suggestions.put("excludeDeletedObjects", SuggestedValuesBuilder.buildOpen(true));
+        }
+
+        if (enableIdBasedPaging != null) {
+
+            suggestions.put("enableIdBasedPaging", SuggestedValuesBuilder.buildOpen(enableIdBasedPaging));
+        } else {
+
+            suggestions.put("enableIdBasedPaging", SuggestedValuesBuilder.buildOpen(false));
         }
 
         suggestions.put("extendedGroupProperties", SuggestedValuesBuilder.buildOpen(

@@ -27,6 +27,7 @@ import java.util.*;
 
 public class QueryBuilder {
     private static final Log LOG = Log.getLog(QueryBuilder.class);
+    private static final String _OFFSET = "OFFSET";
     private final String selectTable;
     private static final String _WHERE = "WHERE";
     private static final String _INNER = "INNER";
@@ -41,6 +42,8 @@ public class QueryBuilder {
     private static final String _MAX = "MAX";
     private static final String _ASC = "ASC";
     private static Integer limit;
+    private OperationOptions operationOptions = null;
+    private final ObjectClass objectClass;
     private String joinStatement;
     private ResourceQuery translatedFilter;
     private boolean useFullAlias = false;
@@ -53,6 +56,7 @@ public class QueryBuilder {
 
     private Set<String> groupByColumns = new HashSet<>();
     private Map<String, Set<String>> inStatement = new HashMap<>();
+    private Integer offset;
 
     public QueryBuilder(ObjectClass objectClass, String selectTable, Integer limit) {
 
@@ -101,6 +105,11 @@ public class QueryBuilder {
         this.selectTable = selectTable;
         this.joinPair = joinPair;
         this.limit = limit;
+
+        if (operationOptions != null) {
+            this.operationOptions = operationOptions;
+        }
+        this.objectClass = objectClass;
     }
 
 
@@ -130,10 +139,82 @@ public class QueryBuilder {
                 }
             }
         }
+        Map<String, Object> o_options = null;
+        if (operationOptions != null) {
 
-        if (translatedFilter != null) {
+            o_options = operationOptions.getOptions();
+        }
+        if (translatedFilter != null ||
+                (operationOptions != null && o_options.containsKey(OperationOptions.OP_PAGE_SIZE))) {
 
-            statementString = statementString + " " + _WHERE + " " + translatedFilter.getCurrentQuerySnippet();
+            Integer pageSize = null;
+            Integer pageOffset = null;
+            String pageCookie = null;
+
+            if (operationOptions != null && o_options.containsKey(OperationOptions.OP_PAGE_SIZE)) {
+                pageSize = operationOptions.getPageSize();
+                pageOffset = operationOptions.getPagedResultsOffset();
+
+                if (offset != null && offset != 0) {
+
+                    offset = offset - 1;
+                }
+                pageCookie = operationOptions.getPagedResultsCookie();
+
+                LOG.ok("Constructing query with the following parameters, pageSize: {0}", pageSize);
+                LOG.ok("Page offset: {0}", pageOffset);
+                LOG.ok("Page cookie: {0}", pageCookie);
+            }
+
+            //TODO paging
+            String idAttr = null;
+
+            // TODO test remove leg
+            LOG.ok("# The object class " + objectClass);
+            if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
+
+                idAttr = SubjectProcessing.ATTR_UID;
+            } else if (objectClass.is(ObjectClass.GROUP_NAME)) {
+
+                idAttr = GroupProcessing.ATTR_UID;
+
+            }
+
+            if (pageSize != null) {
+
+                if (pageCookie != null) {
+
+
+                    statementString = statementString + " " + _WHERE + " " + selectTable + "."
+                            + idAttr + " > " + pageCookie;
+
+                    if (translatedFilter != null) {
+
+                        statementString = statementString + translatedFilter.getCurrentQuerySnippet();
+                    }
+
+                    orderByASC = Set.of(idAttr);
+                    limit = pageSize;
+
+                } else if ((pageCookie == null || (pageCookie != null && pageCookie.isEmpty()))
+                        && pageOffset != null) {
+
+                    limit = pageSize;
+                    offset = pageOffset;
+
+                    orderByASC = Set.of(idAttr);
+                } else {
+
+                    //TODO exception ?
+
+                    throw new ConnectorException("Unexpected situation while building paged search. Page Size: "
+                            + pageSize + ".Page cookie:  " + pageCookie + ". PageOffset: " + pageOffset);
+                }
+
+            } else if (translatedFilter != null) {
+
+                statementString = statementString + " " + _WHERE + " " + translatedFilter.getCurrentQuerySnippet();
+            }
         }
 
         if (inStatement != null && !inStatement.isEmpty()) {
@@ -174,10 +255,6 @@ public class QueryBuilder {
             statementString = statementString + ")";
         }
 
-        if (limit != null) {
-
-            statementString = statementString + " " + _LIMIT + " " + limit;
-        }
 
         if (asSyncQuery && groupByColumns != null
                 && !groupByColumns.isEmpty()) {
@@ -212,6 +289,16 @@ public class QueryBuilder {
                     statementString = statementString + ",";
                 }
             }
+        }
+
+        if (limit != null) {
+
+            statementString = statementString + " " + _LIMIT + " " + limit;
+        }
+
+        if (offset != null) {
+
+            statementString = statementString + " " + _OFFSET + " " + offset;
         }
 
         LOG.ok("Using the following statement string in the select statement: {0}", statementString);

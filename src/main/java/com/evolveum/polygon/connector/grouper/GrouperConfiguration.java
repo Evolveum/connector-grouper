@@ -38,6 +38,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private String[] extendedGroupProperties = {};
     private String[] extendedSubjectProperties = {};
     private Boolean excludeDeletedObjects = true;
+    private Boolean enableIdBasedPaging = false;
 
     @Override
     public void validate() {
@@ -195,6 +196,18 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
 
     public void setExcludeDeletedObjects(Boolean excludeDeletedObjects) {
         this.excludeDeletedObjects = excludeDeletedObjects;
+    }
+
+    //TODO, pagination switch
+    @ConfigurationProperty(order = 11, displayMessageKey = "enableIdBasedPaging.display",
+            helpMessageKey = "enableIdBasedPaging.help")
+
+    public Boolean getEnableIdBasedPaging() {
+        return enableIdBasedPaging;
+    }
+
+    public void setEnableIdBasedPaging(Boolean enableIdBasedPaging) {
+        this.enableIdBasedPaging = enableIdBasedPaging;
     }
 
     @Override

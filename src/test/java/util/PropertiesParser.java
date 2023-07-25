@@ -41,6 +41,7 @@ public class PropertiesParser {
     private static final String _VALID_TIMEOUT = "connectionValidTimeout";
     private static final String _EXTENDED_PROPERTIES_SUBJECT = "extendedSubjectProperties";
     private static final String _EXTENDED_PROPERTIES_GROUP = "extendedGroupProperties";
+    private static final String _ENABLE_ID_BASED_PAGING = "enableIdBasedPaging";
 
     public PropertiesParser() {
 
@@ -78,16 +79,21 @@ public class PropertiesParser {
     public Set<String> getSubjectProperties() {
         return getValues(_EXTENDED_PROPERTIES_SUBJECT);
     }
+
     public Set<String> getGroupProperties() {
         return getValues(_EXTENDED_PROPERTIES_GROUP);
+    }
+
+    public Boolean getEnableIdBasedPaging() {
+        return Boolean.getBoolean((String) PROPERTIES.get(_ENABLE_ID_BASED_PAGING));
     }
 
     public Integer getValidTimeout() {
         String timeout = (String) PROPERTIES.get(_VALID_TIMEOUT);
 
-        if (timeout.isBlank()){
+        if (timeout.isBlank()) {
 
-           return null;
+            return null;
         }
 
         return Integer.parseInt(timeout);

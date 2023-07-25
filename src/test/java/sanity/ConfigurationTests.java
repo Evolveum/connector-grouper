@@ -67,6 +67,10 @@ public class ConfigurationTests extends CommonTestClass {
 
         testConfiguration.setExcludeDeletedObjects(false);
         assertEquals(Boolean.FALSE, testConfiguration.getExcludeDeletedObjects());
+
+        //TODO test
+        testConfiguration.setEnableIdBasedPaging(true);
+        assertEquals(Boolean.TRUE, testConfiguration.getEnableIdBasedPaging());
     }
 
     @Test
@@ -75,5 +79,7 @@ public class ConfigurationTests extends CommonTestClass {
 
         assertEquals(Integer.valueOf(10), testConfiguration.getConnectionValidTimeout());
         assertEquals(Boolean.TRUE, testConfiguration.getExcludeDeletedObjects());
+        //TODO test
+        assertEquals(Boolean.FALSE, testConfiguration.getEnableIdBasedPaging());
     }
 }
