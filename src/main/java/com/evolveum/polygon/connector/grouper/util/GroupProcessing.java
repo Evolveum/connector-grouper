@@ -33,7 +33,7 @@ public class GroupProcessing extends ObjectProcessing {
     private static final String ATTR_DISPLAY_NAME = "display_name";
     private static final String ATTR_DESCRIPTION = "description";
     private static final String ATTR_ID_IDX = "id_index";
-    private static final String TABLE_GR_NAME = "gr_mp_groups";
+    protected static final String TABLE_GR_NAME = "gr_mp_groups";
     private static final String TABLE_GR_EXTENSION_NAME = "gr_mp_group_attributes";
     protected static final String ATTR_UID = ATTR_ID_IDX;
     protected static final String ATTR_NAME = "group_name";
@@ -81,7 +81,6 @@ public class GroupProcessing extends ObjectProcessing {
 
         ObjectClassInfoBuilder groupObjClassBuilder = new ObjectClassInfoBuilder();
         groupObjClassBuilder.setType(ObjectClass.GROUP_NAME);
-
 
         //Read-only,
 
@@ -143,6 +142,27 @@ public class GroupProcessing extends ObjectProcessing {
         List<String> extended = configuration.getExtendedGroupProperties() != null ?
                 Arrays.asList(configuration.getExtendedGroupProperties()) : null;
 
+        // TODO test omit deleted mechanism
+
+        LOG.ok("The exclude delete objects: {0}", configuration.getExcludeDeletedObjects());
+        if (configuration.getExcludeDeletedObjects()) {
+            if (filter != null) {
+                LOG.ok("Augmenting filter {0}, " +
+                        "with DELETED=F argument based on the exclude delete objects property value", filter);
+
+                EqualsFilter equalsFilter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(
+                        TABLE_GR_NAME + "." + ATTR_DELETED, "F"));
+                filter = FilterBuilder.and(equalsFilter, filter);
+
+            } else {
+                LOG.ok("Augmenting empty filter with DELETED=F argument based on the exclude delete objects property " +
+                        "value");
+
+                filter = FilterBuilder.equalTo(AttributeBuilder.build(
+                        TABLE_GR_NAME + "." + ATTR_DELETED, "F"));
+            }
+        }
+
         if (getAttributesToGet(operationOptions) != null &&
                 (!getAttributesToGet(operationOptions).isEmpty() && filter != null)) {
 
@@ -166,19 +186,6 @@ public class GroupProcessing extends ObjectProcessing {
             queryBuilder = new QueryBuilder(O_CLASS, filter,
                     tablesAndColumns, TABLE_GR_NAME, joinMap, operationOptions);
         } else {
-
-            // TODO test omit deleted mechanism
-
-            if (configuration.getExcludeDeletedObjects()) {
-                if (filter != null) {
-                    EqualsFilter equalsFilter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(ATTR_DELETED,
-                            "F"));
-                    AndFilter andFilter = (AndFilter) FilterBuilder.and(equalsFilter, filter);
-                } else {
-                    filter = FilterBuilder.equalTo(AttributeBuilder.build(ATTR_DELETED,
-                            "F"));
-                }
-            }
 
             queryBuilder = new QueryBuilder(O_CLASS, filter, Map.of(TABLE_GR_NAME, columns),
                     TABLE_GR_NAME, operationOptions);

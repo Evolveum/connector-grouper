@@ -19,6 +19,7 @@ package util;
 import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
 import com.evolveum.polygon.connector.grouper.GrouperConnector;
 import org.identityconnectors.common.CollectionUtil;
+import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.testng.annotations.AfterMethod;
@@ -28,6 +29,7 @@ import java.util.*;
 
 public class CommonTestClass implements ObjectConstants {
 
+    private static final Log LOG = Log.getLog(CommonTestClass.class);
     protected final PropertiesParser parser = new PropertiesParser();
     protected GrouperConfiguration grouperConfiguration = new GrouperConfiguration();
     protected GrouperConnector grouperConnector = new GrouperConnector();
@@ -46,6 +48,8 @@ public class CommonTestClass implements ObjectConstants {
         grouperConfiguration.setPassword(parser.getPassword());
         grouperConfiguration.setUserName(parser.getLogin());
         grouperConfiguration.setEnableIdBasedPaging(parser.getEnableIdBasedPaging());
+
+        grouperConfiguration.setExcludeDeletedObjects(parser.getExcludeDeletedObjects());
 
         if (parser.getValidTimeout() != null) {
             grouperConfiguration.setConnectionValidTimeout(parser.getValidTimeout());

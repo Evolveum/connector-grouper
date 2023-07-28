@@ -42,6 +42,7 @@ public class PropertiesParser {
     private static final String _EXTENDED_PROPERTIES_SUBJECT = "extendedSubjectProperties";
     private static final String _EXTENDED_PROPERTIES_GROUP = "extendedGroupProperties";
     private static final String _ENABLE_ID_BASED_PAGING = "enableIdBasedPaging";
+    private static final String _EXCLUDE_DELETED = "excludeDeletedObjects";
 
     public PropertiesParser() {
 
@@ -85,7 +86,13 @@ public class PropertiesParser {
     }
 
     public Boolean getEnableIdBasedPaging() {
-        return Boolean.getBoolean((String) PROPERTIES.get(_ENABLE_ID_BASED_PAGING));
+
+        return "true".equalsIgnoreCase((String) PROPERTIES.get(_ENABLE_ID_BASED_PAGING));
+    }
+
+    public Boolean getExcludeDeletedObjects() {
+
+        return "true".equalsIgnoreCase((String) PROPERTIES.get(_EXCLUDE_DELETED));
     }
 
     public Integer getValidTimeout() {

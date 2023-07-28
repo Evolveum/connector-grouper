@@ -155,9 +155,9 @@ public class QueryBuilder {
                 pageSize = operationOptions.getPageSize();
                 pageOffset = operationOptions.getPagedResultsOffset();
 
-                if (offset != null && offset != 0) {
+                if (pageOffset != null && pageOffset != 0) {
 
-                    offset = offset - 1;
+                    pageOffset = pageOffset - 1;
                 }
                 pageCookie = operationOptions.getPagedResultsCookie();
 
@@ -166,17 +166,15 @@ public class QueryBuilder {
                 LOG.ok("Page cookie: {0}", pageCookie);
             }
 
-            //TODO paging
+
             String idAttr = null;
 
-            // TODO test remove leg
-            LOG.ok("# The object class " + objectClass);
             if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
 
-                idAttr = SubjectProcessing.ATTR_UID;
+                idAttr = SubjectProcessing.TABLE_SU_NAME + "." + SubjectProcessing.ATTR_UID;
             } else if (objectClass.is(ObjectClass.GROUP_NAME)) {
 
-                idAttr = GroupProcessing.ATTR_UID;
+                idAttr = GroupProcessing.TABLE_GR_NAME + "." + GroupProcessing.ATTR_UID;
 
             }
 
@@ -190,7 +188,8 @@ public class QueryBuilder {
 
                     if (translatedFilter != null) {
 
-                        statementString = statementString + translatedFilter.getCurrentQuerySnippet();
+                        statementString = statementString + " AND (" +
+                                translatedFilter.getCurrentQuerySnippet() + ")";
                     }
 
                     orderByASC = Set.of(idAttr);
@@ -203,15 +202,20 @@ public class QueryBuilder {
                     offset = pageOffset;
 
                     orderByASC = Set.of(idAttr);
-                } else {
 
-                    //TODO exception ?
+                    if (translatedFilter != null) {
+
+                        statementString = statementString + " " + _WHERE + " "
+                                + translatedFilter.getCurrentQuerySnippet();
+                    }
+
+                } else {
 
                     throw new ConnectorException("Unexpected situation while building paged search. Page Size: "
                             + pageSize + ".Page cookie:  " + pageCookie + ". PageOffset: " + pageOffset);
                 }
 
-            } else if (translatedFilter != null) {
+            } else {
 
                 statementString = statementString + " " + _WHERE + " " + translatedFilter.getCurrentQuerySnippet();
             }

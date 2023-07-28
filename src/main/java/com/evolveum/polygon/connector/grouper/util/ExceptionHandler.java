@@ -105,12 +105,13 @@ public class ExceptionHandler {
     private RuntimeException checkIfLogAndReturn(RuntimeException exceptionToThrow, SQLException exceptionToConsume,
                                                  Boolean logErr, String errMessage) {
 
+        String message = errMessage + " " + exceptionToConsume.getLocalizedMessage();
         if (!logErr) {
 
-            LOG.ok(errMessage + " " + exceptionToConsume.getLocalizedMessage());
+            LOG.ok(message);
 
         } else {
-            LOG.error(errMessage + " " + exceptionToConsume.getLocalizedMessage());
+            LOG.error(message);
         }
 
         return exceptionToThrow;

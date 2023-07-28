@@ -52,9 +52,30 @@ public class FilteringTest extends CommonTestClass {
 
     //TODO test
     @Test()
-    public void fetchAllPaged() {
+    public void fetchAllPagedCookie() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, false, "87",
+                0, 20);
+        ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        grouperConnector.executeQuery(objectClassSubject, null, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
+    }
+
+    @Test()
+    public void fetchAllPagedNoCookie() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, false, null,
                 0, 20);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
         grouperConnector.init(grouperConfiguration);
@@ -175,6 +196,41 @@ public class FilteringTest extends CommonTestClass {
 
         Assert.assertTrue(isOK);
     }
+
+    @Test()
+    public void containsUIDAndAttributesToGetWithPaging() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true,
+                null, 0, 20);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        ContainsFilter filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "1"));
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+
+            if (uid.contains("1")) {
+            } else {
+                isOK = false;
+            }
+
+        }
+
+        Assert.assertTrue(isOK);
+    }
+
 
     @Test()
     public void startsWithUIDAndAttributesToGet() {
@@ -371,6 +427,92 @@ public class FilteringTest extends CommonTestClass {
     public void andOrContainsUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        ContainsFilter c1filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "1"));
+        ContainsFilter c2filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "0"));
+        ContainsFilter c3filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "87"));
+
+        AndFilter a1Filter = (AndFilter) FilterBuilder.and(c1filter, c2filter);
+
+        OrFilter orFilter = (OrFilter) FilterBuilder.or(a1Filter, c3filter);
+
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), orFilter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+            if ((uid.contains("1") && uid.contains("0")) || uid.contains("87")) {
+
+            } else {
+                isOK = false;
+            }
+
+        }
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void andOrContainsUIDAndAttributesToGetWithPaging() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true, null,
+                0, 20);
+
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        ContainsFilter c1filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "1"));
+        ContainsFilter c2filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "0"));
+        ContainsFilter c3filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "87"));
+
+        AndFilter a1Filter = (AndFilter) FilterBuilder.and(c1filter, c2filter);
+
+        OrFilter orFilter = (OrFilter) FilterBuilder.or(a1Filter, c3filter);
+
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), orFilter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+            if ((uid.contains("1") && uid.contains("0")) || uid.contains("87")) {
+
+            } else {
+                isOK = false;
+            }
+
+        }
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void andOrContainsUIDAndAttributesToGetWithPageCookie() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true, "10",
+                0, 20);
 
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();

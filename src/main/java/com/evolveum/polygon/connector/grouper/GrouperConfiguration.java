@@ -39,6 +39,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private String[] extendedSubjectProperties = {};
     private Boolean excludeDeletedObjects = true;
     private Boolean enableIdBasedPaging = false;
+    private Integer maxPageSize;
 
     @Override
     public void validate() {
@@ -210,6 +211,19 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.enableIdBasedPaging = enableIdBasedPaging;
     }
 
+    //TODO, pagination switch
+    @ConfigurationProperty(order = 12, displayMessageKey = "maxPageSize.display",
+            helpMessageKey = "maxPageSize.help")
+
+    public Integer getMaxPageSize() {
+        return maxPageSize;
+    }
+
+    public void setMaxPageSize(Integer maxPageSize) {
+        this.maxPageSize = maxPageSize;
+    }
+
+
     @Override
     public void release() {
 
@@ -222,5 +236,6 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         extendedSubjectProperties = null;
         extendedGroupProperties = null;
         excludeDeletedObjects = true;
+        maxPageSize = null;
     }
 }

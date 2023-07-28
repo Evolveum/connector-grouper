@@ -22,6 +22,7 @@ import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.*;
+import org.identityconnectors.framework.spi.SearchResultsHandler;
 
 import java.sql.*;
 import java.util.*;
@@ -31,7 +32,7 @@ public class SubjectProcessing extends ObjectProcessing {
     private static final Log LOG = Log.getLog(SubjectProcessing.class);
     private static final String ATTR_ID = "subject_id";
     private static final String ATTR_ID_IDX = "subject_id_index";
-    private static final String TABLE_SU_NAME = "gr_mp_subjects";
+    protected static final String TABLE_SU_NAME = "gr_mp_subjects";
     private static final String TABLE_SU_EXTENSION_NAME = "gr_mp_subject_attributes";
     public static final ObjectClass O_CLASS = new ObjectClass(SUBJECT_NAME);
     protected static final String ATTR_UID = ATTR_ID_IDX;
@@ -83,7 +84,8 @@ public class SubjectProcessing extends ObjectProcessing {
 
 
         AttributeInfoBuilder last_modified = new AttributeInfoBuilder(ATTR_MODIFIED);
-        last_modified.setRequired(false).setType(Integer.class).setCreateable(false).setUpdateable(false).setReadable(true);
+        last_modified.setRequired(false).setType(Integer.class).setCreateable(false).setUpdateable(false)
+                .setReadable(true);
         subjectObjClassBuilder.addAttributeInfo(last_modified.build());
 
         AttributeInfoBuilder deleted = new AttributeInfoBuilder(ATTR_DELETED);
@@ -124,6 +126,24 @@ public class SubjectProcessing extends ObjectProcessing {
 
         List<String> extended = configuration.getExtendedSubjectProperties() != null ?
                 Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
+
+        if (configuration.getExcludeDeletedObjects()) {
+            if (filter != null) {
+                LOG.ok("Augmenting filter {0}, " +
+                        "with DELETED=F argument based on the exclude delete objects property value", filter);
+
+                EqualsFilter equalsFilter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(
+                        TABLE_SU_NAME + "." + ATTR_DELETED, "F"));
+                filter = FilterBuilder.and(equalsFilter, filter);
+
+            } else {
+                LOG.ok("Augmenting empty filter with DELETED=F argument based on the exclude delete objects property " +
+                        "value");
+
+                filter = FilterBuilder.equalTo(AttributeBuilder.build(
+                        TABLE_SU_NAME + "." + ATTR_DELETED, "F"));
+            }
+        }
 
         if (getAttributesToGet(operationOptions) != null &&
                 (!getAttributesToGet(operationOptions).isEmpty() && filter != null)) {
@@ -203,9 +223,13 @@ public class SubjectProcessing extends ObjectProcessing {
                 }
             }
 
+            String pseudoCookie = null;
             if (objects.isEmpty()) {
                 LOG.ok("Empty object set in execute query");
             } else {
+
+                Integer sizeS = objects.size();
+                Integer processed = 0;
                 for (String objectName : objects.keySet()) {
 
                     LOG.info("The object name: {0}", objectName);
@@ -213,6 +237,7 @@ public class SubjectProcessing extends ObjectProcessing {
                     LOG.info("The object: {0}", objects.get(objectName).toString());
 
                     GrouperObject go = objects.get(objectName);
+                    //TODO revise
                     if (configuration.getExcludeDeletedObjects()) {
                         if (go.isDeleted()) {
                             LOG.ok("Following object omitted from evaluation, because it's deleted, identifier: "
@@ -223,19 +248,39 @@ public class SubjectProcessing extends ObjectProcessing {
                     }
 
                     ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+                    pseudoCookie = go.getIdentifier();
                     if (!handler.handle(co.build())) {
+
+                        if (handler instanceof SearchResultsHandler) {
+
+                            LOG.ok("Handling results with pseudoCookie: {0}", pseudoCookie);
+                            LOG.ok("Remaining page results: {0}", sizeS - processed);
+
+                            SearchResult searchResult = new SearchResult(pseudoCookie,
+                                    sizeS - processed);
+                            ((SearchResultsHandler) handler).handleResult(searchResult);
+                        }
 
                         LOG.warn("Result handling interrupted by handler!");
                         break;
                     }
 
+                    processed++;
+                }
+                //TODO test handling for each result
+                if (handler instanceof SearchResultsHandler) {
+
+                    LOG.ok("Handling results with pseudoCookie: {0}", pseudoCookie);
+                    LOG.ok("Remaining page results: {0}", sizeS - processed);
+                    SearchResult searchResult = new SearchResult(pseudoCookie, -1);
+                    ((SearchResultsHandler) handler).handleResult(searchResult);
                 }
             }
 
         } catch (SQLException e) {
 
             String errMessage = "Exception occurred during the Execute query operation while processing the query: "
-                    + query + ". The object class being handled: " + O_CLASS + ". And evaluating the filter: " + filter;
+                    + query + ". The object class being handled: " + O_CLASS + "." ;
 
             throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
 
@@ -564,7 +609,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
         String query = queryBuilder.build();
 
-        ResultSet result ;
+        ResultSet result;
 
         Map<String, GrouperObject> objects = new HashMap<>();
 

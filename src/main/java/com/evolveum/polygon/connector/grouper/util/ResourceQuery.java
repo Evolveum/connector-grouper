@@ -26,6 +26,7 @@ public class ResourceQuery {
     private ObjectClass objectClass;
     private Map<String, Map<String, Class>> columnInformation;
     private String currentQuerySnippet = null;
+    private boolean isComposite = false;
 
     public ResourceQuery(ObjectClass objectClass, Map<String, Map<String, Class>> columnInformation) {
 
@@ -54,7 +55,15 @@ public class ResourceQuery {
 
         if (getCurrentQuerySnippet() != null) {
 
-            setCurrentQuerySnippet(resourceQuery.getCurrentQuerySnippet() + " " + operator + " (" + getCurrentQuerySnippet() + ")");
+            if (!resourceQuery.isComposite) {
+
+                setCurrentQuerySnippet(resourceQuery.getCurrentQuerySnippet() + " " + operator +
+                        " (" + getCurrentQuerySnippet() + ")");
+            } else {
+
+                setCurrentQuerySnippet("(" + resourceQuery.getCurrentQuerySnippet() + ")" + " " + operator +
+                        " (" + getCurrentQuerySnippet() + ")");
+            }
         } else {
 
             setCurrentQuerySnippet(resourceQuery.getCurrentQuerySnippet());
@@ -63,10 +72,17 @@ public class ResourceQuery {
         LOG.ok("Query builder value after augmentation: {0}", getCurrentQuerySnippet());
     }
 
-    public void addOperator(String operator){
+    public void addOperator(String operator) {
 
-        setCurrentQuerySnippet( operator + " (" + getCurrentQuerySnippet() + ")");
+        setCurrentQuerySnippet(operator + " (" + getCurrentQuerySnippet() + ")");
 
     }
 
+    public boolean isComposite() {
+        return isComposite;
+    }
+
+    public void setComposite(boolean composite) {
+        isComposite = composite;
+    }
 }

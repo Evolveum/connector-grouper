@@ -371,8 +371,15 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
         while (filterIterator.hasNext()) {
 
             Filter filter = filterIterator.next();
-            r.add(filter.accept(this, query), op);
+            if (filter instanceof CompositeFilter || filter instanceof NotFilter) {
+                ResourceQuery compositeQuery = new ResourceQuery(r.getObjectClass(), r.getColumnInformation());
+                compositeQuery.setComposite(true);
 
+                r.add(filter.accept(this, compositeQuery), op);
+            } else {
+
+                r.add(filter.accept(this, query), op);
+            }
         }
 
     }

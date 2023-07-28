@@ -44,7 +44,7 @@ public class SchemaTranslator {
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class);
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes(), SearchOp.class);
 
-        //TODO paging
+//TODO test with schema refresh
         if (configuration.getEnableIdBasedPaging()) {
 
             schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildPageSize());
