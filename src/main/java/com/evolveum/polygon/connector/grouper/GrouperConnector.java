@@ -30,10 +30,7 @@ import org.identityconnectors.framework.spi.ConnectorClass;
 import org.identityconnectors.framework.spi.operations.*;
 
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @ConnectorClass(displayNameKey = "grouper.connector.display", configurationClass = GrouperConfiguration.class)
 public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp,
@@ -233,7 +230,6 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             syncToken = getLatestSyncToken(objectClass);
         }
 
-
         if (objectClass.is(ObjectClass.GROUP_NAME)) {
 
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
@@ -243,14 +239,121 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
             subjectProcessing.sync(syncToken, syncResultsHandler, operationOptions, grouperConnection.getConnection());
 
+        } else if (objectClass.is(ObjectClass.ALL_NAME)) {
+
+            SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
+            GroupProcessing groupProcessing = new GroupProcessing(configuration);
+
+            LinkedHashMap<String, GrouperObject> subjectObjectLinkedHashMap = subjectProcessing.
+                    sync(syncToken, operationOptions, grouperConnection.getConnection());
+
+            LinkedHashMap<String, GrouperObject> groupObjectLinkedHashMap = groupProcessing.
+                    sync(syncToken, operationOptions, grouperConnection.getConnection());
+
+            LinkedHashMap<String, GrouperObject> mergedMap = new LinkedHashMap<>();
+
+            Iterator<String> groupIterator = groupObjectLinkedHashMap.keySet().iterator();
+            Iterator<String> subjectIterator = subjectObjectLinkedHashMap.keySet().iterator();
+
+            GrouperObject gog = null;
+            Long groupTimestamp = null;
+
+            while (subjectIterator.hasNext()) {
+                GrouperObject so = subjectObjectLinkedHashMap.get(subjectIterator.next());
+                Long subjectTimestamp = so.latestTimestamp;
+
+                while (groupIterator.hasNext()) {
+
+                    if (gog == null) {
+                        gog = groupObjectLinkedHashMap.get(groupIterator.next());
+                    }
+                    if (groupTimestamp == null) {
+                        groupTimestamp = gog.latestTimestamp;
+                    }
+
+                    if (groupTimestamp.compareTo(subjectTimestamp) <= 0) {
+                        mergedMap.put(gog.getIdentifier(), gog);
+
+                        if (!groupIterator.hasNext()) {
+                            gog = null;
+
+                        } else {
+                            gog = groupObjectLinkedHashMap.get(groupIterator.next());
+                            groupTimestamp = gog.latestTimestamp;
+
+                        }
+                    } else {
+                        mergedMap.put(so.getIdentifier(), so);
+
+                        break;
+                    }
+                }
+                if (!groupIterator.hasNext()) {
+
+                    if (gog != null) {
+
+                        if (groupTimestamp.compareTo(subjectTimestamp) <= 0) {
+                            mergedMap.put(gog.getIdentifier(), gog);
+                            mergedMap.put(so.getIdentifier(), so);
+                            gog = null;
+                        } else {
+                            mergedMap.put(so.getIdentifier(), so);
+                        }
+                    } else {
+                        mergedMap.put(so.getIdentifier(), so);
+                    }
+                }
+            }
+
+            if (groupIterator.hasNext()) {
+
+                while (groupIterator.hasNext()) {
+
+                    if (gog != null) {
+                        mergedMap.put(gog.getIdentifier(), gog);
+                        gog = groupObjectLinkedHashMap.get(groupIterator.next());
+
+                        if (!groupIterator.hasNext()) {
+                            mergedMap.put(gog.getIdentifier(), gog);
+                        }
+                    } else {
+                        gog = groupObjectLinkedHashMap.get(groupIterator.next());
+                        mergedMap.put(gog.getIdentifier(), gog);
+                    }
+
+                }
+            } else {
+
+                if (gog != null) {
+
+                    mergedMap.put(gog.getIdentifier(), gog);
+                }
+            }
+
+            for (String id : mergedMap.keySet()) {
+
+                GrouperObject go = mergedMap.get(id);
+                if (go.getObjectClass().is(ObjectClass.GROUP_NAME)) {
+
+                    if (!groupProcessing.sync(syncResultsHandler, ObjectClass.GROUP, go)) {
+
+                        break;
+                    }
+                } else if (go.getObjectClass().is(SubjectProcessing.SUBJECT_NAME)) {
+
+                    if (!subjectProcessing.sync(syncResultsHandler, SubjectProcessing.O_CLASS, go)) {
+
+                        break;
+                    }
+                }
+            }
+
         } else {
 
             throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
                     "Only " + ObjectClass.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
                     "is supported for SyncOp currently.");
         }
-
-
     }
 
     @Override
@@ -260,14 +363,30 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
 
-
-            return groupProcessing.getLatestSyncToken(grouperConnection.getConnection());
+            return new SyncToken(groupProcessing.getLatestSyncToken(grouperConnection.getConnection()));
 
         } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
 
             SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
 
-            return subjectProcessing.getLatestSyncToken(grouperConnection.getConnection());
+            return new SyncToken(subjectProcessing.getLatestSyncToken(grouperConnection.getConnection()));
+        } else if (objectClass.is(ObjectClass.ALL_NAME)) {
+
+            GroupProcessing groupProcessing = new GroupProcessing(configuration);
+            SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
+
+            Long subjectToken = subjectProcessing.getLatestSyncToken(grouperConnection.getConnection());
+
+            Long groupToken = groupProcessing.getLatestSyncToken(grouperConnection.getConnection());
+
+            if (subjectToken.compareTo(groupToken) <= 0) {
+
+                return new SyncToken(groupToken);
+            } else {
+
+                return new SyncToken(subjectToken);
+            }
+
         } else {
 
             throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
