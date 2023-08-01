@@ -17,6 +17,7 @@
 package com.evolveum.polygon.connector.grouper.util;
 
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.objects.ObjectClass;
 
 import java.util.*;
 
@@ -27,6 +28,8 @@ public class GrouperObject {
     private String name;
     public Map<String, Object> attributes = new HashMap<>();
     public Boolean deleted = false;
+
+    private ObjectClass objectClass;
 
     public Long latestTimestamp = null;
 
@@ -100,9 +103,16 @@ public class GrouperObject {
 
             if (multiValuedAttributesCatalogue.contains(name)) {
 
-
                 Set<Object> multivalSet = new HashSet<>();
-                multivalSet.add(value);
+
+                if (value instanceof Set<?>) {
+
+                    multivalSet.addAll((Set) value);
+                } else {
+
+                    multivalSet.add(value);
+                }
+
                 attributes.put(origName, multivalSet);
 
             } else {
@@ -159,5 +169,13 @@ public class GrouperObject {
 
     public void setLatestTimestamp(Long latestTimestamp) {
         this.latestTimestamp = latestTimestamp;
+    }
+
+    public ObjectClass getObjectClass() {
+        return objectClass;
+    }
+
+    public void setObjectClass(ObjectClass objectClass) {
+        this.objectClass = objectClass;
     }
 }

@@ -73,8 +73,9 @@ public class SubjectProcessing extends ObjectProcessing {
     public void buildObjectClass(SchemaBuilder schemaBuilder, GrouperConfiguration configuration) {
         LOG.info("Building object class definition for {0}", SUBJECT_NAME);
 
+        ObjectClass objectClass = new ObjectClass(SUBJECT_NAME);
         ObjectClassInfoBuilder subjectObjClassBuilder = new ObjectClassInfoBuilder();
-        subjectObjClassBuilder.setType(SUBJECT_NAME);
+        subjectObjClassBuilder.setType(objectClass.getObjectClassValue());
 
         //Read-only,
         AttributeInfoBuilder id = new AttributeInfoBuilder(Name.NAME);
@@ -116,6 +117,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
         }
         schemaBuilder.defineObjectClass(subjectObjClassBuilder.build());
+
     }
 
     public void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
@@ -195,6 +197,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
                     GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                             multiValuedAttributesCatalogue, Map.of(ATTR_MEMBER_OF_NATIVE, ATTR_MEMBER_OF));
+                    go.setObjectClass(O_CLASS);
 
                     if (objects.isEmpty()) {
                         objects.put(go.getIdentifier(), go);
@@ -310,8 +313,26 @@ public class SubjectProcessing extends ObjectProcessing {
     @Override
     public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions,
                      Connection connection) {
-        QueryBuilder queryBuilder;
+        Map<String, GrouperObject> objectMap = sync(syncToken, operationOptions, connection);
 
+        SyncDeltaBuilder builder = new SyncDeltaBuilder();
+        builder.setObjectClass(O_CLASS);
+
+        for (String objID : objectMap.keySet()) {
+            GrouperObject grouperObject = objectMap.get(objID);
+
+            if (!sync(syncResultsHandler, O_CLASS, grouperObject)) {
+
+                break;
+            }
+        }
+    }
+
+    @Override
+    public LinkedHashMap<String, GrouperObject> sync(SyncToken syncToken, OperationOptions operationOptions,
+                                                     Connection connection) {
+        QueryBuilder queryBuilder;
+        LinkedHashMap<String, GrouperObject> objects = new LinkedHashMap<>();
         String tokenVal;
         if (syncToken.getValue() instanceof Long) {
 
@@ -330,6 +351,7 @@ public class SubjectProcessing extends ObjectProcessing {
         GreaterThanFilter greaterThanFilterMember = null;
 
         GreaterThanFilter greaterThanFilterExtension = null;
+
 
         Filter filter = greaterThanFilterBase;
 
@@ -398,7 +420,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
         ResultSet result = null;
 
-        Map<String, GrouperObject> objects = new LinkedHashMap<>();
+
         try {
             PreparedStatement prepareStatement = connection.prepareStatement(query);
             result = prepareStatement.executeQuery();
@@ -408,6 +430,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
                 GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                         multiValuedAttributesCatalogue, null);
+                go.setObjectClass(O_CLASS);
 
                 if (objects.isEmpty()) {
                     objects.put(go.getIdentifier(), go);
@@ -439,7 +462,7 @@ public class SubjectProcessing extends ObjectProcessing {
                 LOG.ok("Empty object set in sync op.");
             } else {
 
-                Map<String, GrouperObject> notDeletedObject = new LinkedHashMap<>();
+                Map<String, GrouperObject> notDeletedObjects = new LinkedHashMap<>();
 
                 for (String id : objects.keySet()) {
                     GrouperObject object = objects.get(id);
@@ -448,48 +471,35 @@ public class SubjectProcessing extends ObjectProcessing {
 
                     } else {
 
-                        notDeletedObject.put(id, object);
+                        notDeletedObjects.put(id, object);
                     }
                 }
 
-                if (!notDeletedObject.isEmpty()) {
-                    notDeletedObject = fetchFullNonDeletedObjects(notDeletedObject, operationOptions, connection);
+                if (!notDeletedObjects.isEmpty()) {
+                    notDeletedObjects = fetchFullNonDeletedObjects(notDeletedObjects, operationOptions, connection);
                 }
 
                 for (String id : objects.keySet()) {
 
-                    SyncDeltaBuilder builder = new SyncDeltaBuilder();
-                    builder.setObjectClass(O_CLASS);
-                    GrouperObject objectPartial = objects.get(id);
-                    if (!notDeletedObject.isEmpty() && notDeletedObject.containsKey(id)) {
+                    if (!notDeletedObjects.isEmpty() && notDeletedObjects.containsKey(id)) {
 
-                        GrouperObject nonDelObjFull = notDeletedObject.get(id);
-                        builder.setDeltaType(SyncDeltaType.CREATE_OR_UPDATE);
-                        builder.setUid(new Uid(id));
-                        builder.setToken(new SyncToken(objectPartial.getLatestTimestamp()));
+                        GrouperObject grouperObject = objects.get(id);
+                        GrouperObject notDeletedObject = notDeletedObjects.get(id);
 
-                        ConnectorObjectBuilder objectBuilder = buildConnectorObject(O_CLASS, nonDelObjFull,
-                                operationOptions);
+                        grouperObject.setName(notDeletedObject.getName());
 
-                        builder.setObject(objectBuilder.build());
+                        Map<String, Object> attrMap = notDeletedObject.getAttributes();
 
+                        for (String attName : attrMap.keySet()) {
 
-                    } else {
+                            grouperObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
 
-                        builder.setDeltaType(SyncDeltaType.DELETE);
-                        LOG.ok("{0} is deleted", id);
-                        builder.setUid(new Uid(id));
-                        builder.setToken(new SyncToken(objectPartial.getLatestTimestamp()));
+                        }
 
                     }
-                    SyncDelta syncdelta = builder.build();
 
-                    if (!syncResultsHandler.handle(syncdelta)) {
-
-                        LOG.warn("Result handling interrupted by handler!");
-                        break;
-                    }
                 }
+
             }
 
         } catch (SQLException e) {
@@ -501,10 +511,11 @@ public class SubjectProcessing extends ObjectProcessing {
 
         }
 
+        return objects;
     }
 
     @Override
-    public SyncToken getLatestSyncToken(Connection connection) {
+    public Long getLatestSyncToken(Connection connection) {
         LOG.ok("Processing through the 'getLatestSyncToken' method for the objectClass {0}", ObjectClass.GROUP);
 
         Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
@@ -542,7 +553,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
                     Long val = result.wasNull() ? null : resVal;
 
-                    return new SyncToken(val);
+                    return val;
                 }
             }
 
@@ -622,6 +633,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
                 GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                         multiValuedAttributesCatalogue, Map.of(ATTR_MEMBER_OF_NATIVE, ATTR_MEMBER_OF));
+                go.setObjectClass(O_CLASS);
 
                 if (objects.isEmpty()) {
                     objects.put(go.getIdentifier(), go);

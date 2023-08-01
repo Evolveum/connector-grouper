@@ -213,6 +213,7 @@ public class GroupProcessing extends ObjectProcessing {
 
                 GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                         multiValuedAttributesCatalogue, Map.of(ATTR_MEMBERS_NATIVE, ATTR_MEMBERS));
+                go.setObjectClass(O_CLASS);
 
                 if (objects.isEmpty()) {
                     objects.put(go.getIdentifier(), go);
@@ -322,9 +323,10 @@ public class GroupProcessing extends ObjectProcessing {
     }
 
     @Override
-    public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions,
-                     Connection connection) {
+    public LinkedHashMap<String, GrouperObject> sync(SyncToken syncToken, OperationOptions operationOptions,
+                                                     Connection connection) {
         QueryBuilder queryBuilder;
+        LinkedHashMap<String, GrouperObject> objects = new LinkedHashMap<>();
 
         String tokenVal;
         if (syncToken.getValue() instanceof Long) {
@@ -370,7 +372,7 @@ public class GroupProcessing extends ObjectProcessing {
                                 tokenVal));
 
                 tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, objectColumns);
-                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
             }
 
             if (attrsToGet.stream().anyMatch(atg -> extended.contains(atg))) {
@@ -381,7 +383,7 @@ public class GroupProcessing extends ObjectProcessing {
                                 tokenVal));
 
                 tablesAndColumns.put(TABLE_GR_EXTENSION_NAME, objectColumns);
-                joinMap.put(Map.of(TABLE_GR_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+                joinMap.put(Map.of(TABLE_GR_EXTENSION_NAME, ATTR_GR_ID_IDX), ATTR_ID_IDX);
             }
 
             if (greaterThanFilterMember != null && greaterThanFilterExtension != null) {
@@ -412,7 +414,6 @@ public class GroupProcessing extends ObjectProcessing {
 
         ResultSet result;
 
-        Map<String, GrouperObject> objects = new LinkedHashMap<>();
         try {
             PreparedStatement prepareStatement = connection.prepareStatement(query);
             result = prepareStatement.executeQuery();
@@ -426,6 +427,7 @@ public class GroupProcessing extends ObjectProcessing {
 
                 GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                         multiValuedAttributesCatalogue, null);
+                go.setObjectClass(O_CLASS);
 
                 if (objects.isEmpty()) {
                     objects.put(go.getIdentifier(), go);
@@ -457,7 +459,7 @@ public class GroupProcessing extends ObjectProcessing {
                 LOG.ok("Empty object set in sync op.");
             } else {
 
-                Map<String, GrouperObject> notDeletedObject = new LinkedHashMap<>();
+                Map<String, GrouperObject> notDeletedObjects = new LinkedHashMap<>();
 
                 for (String id : objects.keySet()) {
                     GrouperObject object = objects.get(id);
@@ -467,47 +469,33 @@ public class GroupProcessing extends ObjectProcessing {
                         LOG.ok("{0} is deleted", id);
                     } else {
 
-                        notDeletedObject.put(id, object);
+                        notDeletedObjects.put(id, object);
                     }
                 }
 
-                if (!notDeletedObject.isEmpty()) {
-                    notDeletedObject = fetchFullNonDeletedObjects(notDeletedObject, operationOptions, connection);
+                if (!notDeletedObjects.isEmpty()) {
+                    notDeletedObjects = fetchFullNonDeletedObjects(notDeletedObjects, operationOptions, connection);
                 }
 
                 for (String id : objects.keySet()) {
 
-                    SyncDeltaBuilder builder = new SyncDeltaBuilder();
-                    builder.setObjectClass(O_CLASS);
-                    GrouperObject objectPartial = objects.get(id);
-                    if (!notDeletedObject.isEmpty() && notDeletedObject.containsKey(id)) {
+                    if (!notDeletedObjects.isEmpty() && notDeletedObjects.containsKey(id)) {
 
-                        GrouperObject nonDelObjFull = notDeletedObject.get(id);
-                        builder.setDeltaType(SyncDeltaType.CREATE_OR_UPDATE);
-                        builder.setUid(new Uid(id));
-                        builder.setToken(new SyncToken(objectPartial.getLatestTimestamp()));
+                        GrouperObject grouperObject = objects.get(id);
+                        GrouperObject notDeletedObject = notDeletedObjects.get(id);
 
-                        ConnectorObjectBuilder objectBuilder = buildConnectorObject(O_CLASS, nonDelObjFull,
-                                operationOptions);
+                        grouperObject.setName(notDeletedObject.getName());
 
-                        builder.setObject(objectBuilder.build());
+                        Map<String, Object> attrMap = notDeletedObject.getAttributes();
 
-                    } else {
+                        for (String attName : attrMap.keySet()) {
 
-                        builder.setDeltaType(SyncDeltaType.DELETE);
-                        LOG.ok("{0} is deleted", id);
+                            grouperObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
 
-                        builder.setUid(new Uid(id));
-                        builder.setToken(new SyncToken(objectPartial.getLatestTimestamp()));
+                        }
 
                     }
-                    SyncDelta syncdelta = builder.build();
 
-                    if (!syncResultsHandler.handle(syncdelta)) {
-
-                        LOG.warn("Result handling interrupted by handler!");
-                        break;
-                    }
                 }
             }
 
@@ -519,10 +507,30 @@ public class GroupProcessing extends ObjectProcessing {
             throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
         }
 
+        return objects;
     }
 
     @Override
-    public SyncToken getLatestSyncToken(Connection connection) {
+    public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions,
+                     Connection connection) {
+
+        Map<String, GrouperObject> objectMap = sync(syncToken, operationOptions, connection);
+
+        SyncDeltaBuilder builder = new SyncDeltaBuilder();
+        builder.setObjectClass(O_CLASS);
+
+        for (String objID : objectMap.keySet()) {
+            GrouperObject grouperObject = objectMap.get(objID);
+
+            if (!sync(syncResultsHandler, O_CLASS, grouperObject)) {
+
+                break;
+            }
+        }
+    }
+
+    @Override
+    public Long getLatestSyncToken(Connection connection) {
         LOG.ok("Processing through the 'getLatestSyncToken' method for the objectClass {0}", ObjectClass.GROUP);
 
         Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
@@ -560,7 +568,7 @@ public class GroupProcessing extends ObjectProcessing {
 
                     Long val = result.wasNull() ? null : resVal;
 
-                    return new SyncToken(val);
+                    return val;
                 }
             }
 
@@ -645,6 +653,7 @@ public class GroupProcessing extends ObjectProcessing {
 
                 GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                         multiValuedAttributesCatalogue, Map.of(ATTR_MEMBERS_NATIVE, ATTR_MEMBERS));
+                go.setObjectClass(O_CLASS);
 
                 if (objects.isEmpty()) {
                     objects.put(go.getIdentifier(), go);

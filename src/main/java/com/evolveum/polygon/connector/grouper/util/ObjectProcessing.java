@@ -303,6 +303,11 @@ public abstract class ObjectProcessing {
 
     protected abstract String getMainTableName();
 
+    protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, GrouperObject grouperObject) {
+
+        return buildConnectorObject(o_class, grouperObject, null);
+    }
+
     protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, GrouperObject grouperObject,
                                                           OperationOptions oo) {
 
@@ -316,9 +321,13 @@ public abstract class ObjectProcessing {
 
         Map<String, Object> attrs = grouperObject.getAttributes();
 
+        //TODO remove
+        LOG.ok("Building object: {0}", grouperObject.getIdentifier());
+
         for (String name : attrs.keySet()) {
 
             if (attrs.get(name) instanceof HashSet<?>) {
+
                 builder.addAttribute(name, (Set) attrs.get(name));
             } else {
 
@@ -338,8 +347,50 @@ public abstract class ObjectProcessing {
         return null;
     }
 
+    public boolean sync(SyncResultsHandler syncResultsHandler, ObjectClass objectClass,
+                        GrouperObject grouperObject) {
+
+
+        SyncDeltaBuilder builder = new SyncDeltaBuilder();
+        builder.setObjectClass(objectClass);
+        String objID = grouperObject.getIdentifier();
+
+        if (grouperObject.isDeleted()) {
+
+            builder.setDeltaType(SyncDeltaType.DELETE);
+            LOG.ok("{0} is deleted", objID);
+            builder.setUid(new Uid(objID));
+            builder.setToken(new SyncToken(grouperObject.getLatestTimestamp()));
+
+        } else {
+
+            builder.setDeltaType(SyncDeltaType.CREATE_OR_UPDATE);
+            builder.setUid(new Uid(objID));
+            builder.setToken(new SyncToken(grouperObject.getLatestTimestamp()));
+
+            ConnectorObjectBuilder objectBuilder = buildConnectorObject(objectClass, grouperObject);
+
+            builder.setObject(objectBuilder.build());
+        }
+
+        SyncDelta syncdelta = builder.build();
+
+        if (!syncResultsHandler.handle(syncdelta)) {
+
+            LOG.warn("Result handling interrupted by handler!");
+            return false;
+        }
+
+        return true;
+    }
+
     protected abstract void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler,
                                  OperationOptions operationOptions, Connection connection);
 
-    public abstract SyncToken getLatestSyncToken(Connection connection);
+    protected abstract Map<String, GrouperObject> sync(SyncToken syncToken,
+                                                       OperationOptions operationOptions,
+                                                       Connection connection);
+
+
+    public abstract Long getLatestSyncToken(Connection connection);
 }
