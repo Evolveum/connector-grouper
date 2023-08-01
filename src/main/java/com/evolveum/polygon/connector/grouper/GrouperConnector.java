@@ -255,7 +255,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             Iterator<String> groupIterator = groupObjectLinkedHashMap.keySet().iterator();
             Iterator<String> subjectIterator = subjectObjectLinkedHashMap.keySet().iterator();
 
-            GrouperObject gog = null;
+            GrouperObject grouperGroup = null;
             Long groupTimestamp = null;
 
             while (subjectIterator.hasNext()) {
@@ -264,22 +264,22 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
                 while (groupIterator.hasNext()) {
 
-                    if (gog == null) {
-                        gog = groupObjectLinkedHashMap.get(groupIterator.next());
+                    if (grouperGroup == null) {
+                        grouperGroup = groupObjectLinkedHashMap.get(groupIterator.next());
                     }
                     if (groupTimestamp == null) {
-                        groupTimestamp = gog.latestTimestamp;
+                        groupTimestamp = grouperGroup.latestTimestamp;
                     }
 
                     if (groupTimestamp.compareTo(subjectTimestamp) <= 0) {
-                        mergedMap.put(gog.getIdentifier(), gog);
+                        mergedMap.put(grouperGroup.getIdentifier(), grouperGroup);
 
                         if (!groupIterator.hasNext()) {
-                            gog = null;
+                            grouperGroup = null;
 
                         } else {
-                            gog = groupObjectLinkedHashMap.get(groupIterator.next());
-                            groupTimestamp = gog.latestTimestamp;
+                            grouperGroup = groupObjectLinkedHashMap.get(groupIterator.next());
+                            groupTimestamp = grouperGroup.latestTimestamp;
 
                         }
                     } else {
@@ -290,12 +290,12 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
                 }
                 if (!groupIterator.hasNext()) {
 
-                    if (gog != null) {
+                    if (grouperGroup != null) {
 
                         if (groupTimestamp.compareTo(subjectTimestamp) <= 0) {
-                            mergedMap.put(gog.getIdentifier(), gog);
+                            mergedMap.put(grouperGroup.getIdentifier(), grouperGroup);
                             mergedMap.put(so.getIdentifier(), so);
-                            gog = null;
+                            grouperGroup = null;
                         } else {
                             mergedMap.put(so.getIdentifier(), so);
                         }
@@ -309,24 +309,24 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
                 while (groupIterator.hasNext()) {
 
-                    if (gog != null) {
-                        mergedMap.put(gog.getIdentifier(), gog);
-                        gog = groupObjectLinkedHashMap.get(groupIterator.next());
+                    if (grouperGroup != null) {
+                        mergedMap.put(grouperGroup.getIdentifier(), grouperGroup);
+                        grouperGroup = groupObjectLinkedHashMap.get(groupIterator.next());
 
                         if (!groupIterator.hasNext()) {
-                            mergedMap.put(gog.getIdentifier(), gog);
+                            mergedMap.put(grouperGroup.getIdentifier(), grouperGroup);
                         }
                     } else {
-                        gog = groupObjectLinkedHashMap.get(groupIterator.next());
-                        mergedMap.put(gog.getIdentifier(), gog);
+                        grouperGroup = groupObjectLinkedHashMap.get(groupIterator.next());
+                        mergedMap.put(grouperGroup.getIdentifier(), grouperGroup);
                     }
 
                 }
             } else {
 
-                if (gog != null) {
+                if (grouperGroup != null) {
 
-                    mergedMap.put(gog.getIdentifier(), gog);
+                    mergedMap.put(grouperGroup.getIdentifier(), grouperGroup);
                 }
             }
 
