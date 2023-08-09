@@ -75,7 +75,6 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     @Override
     public FilterTranslator createFilterTranslator(ObjectClass objectClass, OperationOptions operationOptions) {
 
-        // TODO using filter visitor pattern
         return new FilterTranslator<Filter>() {
             @Override
             public List<Filter> translate(Filter filter) {
@@ -252,12 +251,54 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
+            LinkedHashMap<String, GrouperObject> subjectObjectLinkedHashMap = new LinkedHashMap<>();
+            LinkedHashMap<String, GrouperObject> groupObjectLinkedHashMap = new LinkedHashMap<>();
+            Integer maxPageSize = configuration.getMaxPageSize();
 
-            LinkedHashMap<String, GrouperObject> subjectObjectLinkedHashMap = subjectProcessing.
-                    sync(syncToken, operationOptions, grouperConnection.getConnection());
 
-            LinkedHashMap<String, GrouperObject> groupObjectLinkedHashMap = groupProcessing.
-                    sync(syncToken, operationOptions, grouperConnection.getConnection());
+            QueryBuilder subjectQuery = subjectProcessing.syncQuery(syncToken, operationOptions,
+                    grouperConnection.getConnection());
+            QueryBuilder groupQuery = groupProcessing.syncQuery(syncToken, operationOptions,
+                    grouperConnection.getConnection());
+
+            Integer subjectCount = subjectQuery.getTotalCount();
+            Integer groupCount = groupQuery.getTotalCount();
+            if (maxPageSize != null) {
+                if (subjectCount != null) {
+
+                    for (int i = 0; subjectCount >= i; i = i + maxPageSize) {
+
+                        subjectQuery.setPageSize(maxPageSize);
+                        subjectQuery.setPageOffset(i + 1);
+
+                        subjectObjectLinkedHashMap.putAll(subjectProcessing.
+                                sync(syncToken, operationOptions, grouperConnection.getConnection(), subjectQuery));
+
+                    }
+                }
+
+                if (groupCount != null) {
+
+                    for (int i = 0; groupCount >= i; i = i + maxPageSize) {
+
+                        groupQuery.setPageSize(maxPageSize);
+                        groupQuery.setPageOffset(i + 1);
+
+                        groupObjectLinkedHashMap.putAll(groupProcessing.
+                                sync(syncToken, operationOptions, grouperConnection.getConnection(), groupQuery));
+
+                    }
+                }
+
+            } else {
+
+                subjectObjectLinkedHashMap = subjectProcessing.
+                        sync(syncToken, operationOptions, grouperConnection.getConnection(), subjectQuery);
+
+                groupObjectLinkedHashMap = groupProcessing.
+                        sync(syncToken, operationOptions, grouperConnection.getConnection(), groupQuery);
+            }
+
 
             LinkedHashMap<String, GrouperObject> mergedMap = new LinkedHashMap<>();
 

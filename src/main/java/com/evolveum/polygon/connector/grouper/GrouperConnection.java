@@ -63,8 +63,6 @@ public class GrouperConnection {
                     + e.getLocalizedMessage());
         }
 
-        //TODO do we need to disable auto commit? With read only ?
-
         return connection;
     }
 

@@ -54,6 +54,8 @@ public class ConfigurationTests extends CommonTestClass {
         assertEquals("grouper", testConfiguration.getDatabaseName());
         testConfiguration.setConnectionValidTimeout(20);
         assertEquals(Integer.valueOf(20), testConfiguration.getConnectionValidTimeout());
+        testConfiguration.setMaxPageSize(20);
+        assertEquals(Integer.valueOf(20), testConfiguration.getMaxPageSize());
 
         String[] extendedGroupPropertiesn = new String[]{"something", "something1", "something2"};
 
@@ -68,7 +70,6 @@ public class ConfigurationTests extends CommonTestClass {
         testConfiguration.setExcludeDeletedObjects(false);
         assertEquals(Boolean.FALSE, testConfiguration.getExcludeDeletedObjects());
 
-        //TODO test
         testConfiguration.setEnableIdBasedPaging(true);
         assertEquals(Boolean.TRUE, testConfiguration.getEnableIdBasedPaging());
     }
@@ -79,7 +80,6 @@ public class ConfigurationTests extends CommonTestClass {
 
         assertEquals(Integer.valueOf(10), testConfiguration.getConnectionValidTimeout());
         assertEquals(Boolean.TRUE, testConfiguration.getExcludeDeletedObjects());
-        //TODO test
         assertEquals(Boolean.FALSE, testConfiguration.getEnableIdBasedPaging());
     }
 }

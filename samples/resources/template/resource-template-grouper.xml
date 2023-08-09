@@ -85,7 +85,6 @@
                 <ref>ri:member_of</ref>
                 <fetchStrategy>explicit</fetchStrategy>
             </attribute>
-            <!--            TODO add also subject to object-->
             <association>
                 <ref>ri:group</ref>
                 <inbound>
@@ -240,9 +239,6 @@
                                                 if("uid".equals(obj?.getElementName().toString())){
 
                                                 groupName = obj?.getValue()?.getRealValue()
-
-                                                //TODO remove log
-                                                log.info("The group name: " +groupName)
 
                                                 return groupName
                                                 }

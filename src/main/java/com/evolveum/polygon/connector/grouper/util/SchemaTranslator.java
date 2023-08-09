@@ -20,13 +20,9 @@ import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
 import com.evolveum.polygon.connector.grouper.GrouperConnector;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.OperationOptionInfoBuilder;
-import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.SchemaBuilder;
 import org.identityconnectors.framework.spi.operations.SearchOp;
-
-import java.util.HashSet;
-import java.util.Set;
 
 public class SchemaTranslator {
     private static final Log LOG = Log.getLog(SchemaTranslator.class);
@@ -44,7 +40,6 @@ public class SchemaTranslator {
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class);
         schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes(), SearchOp.class);
 
-//TODO test with schema refresh
         if (configuration.getEnableIdBasedPaging()) {
 
             schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildPageSize());

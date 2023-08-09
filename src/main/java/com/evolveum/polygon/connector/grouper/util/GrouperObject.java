@@ -56,10 +56,6 @@ public class GrouperObject {
         return attributes;
     }
 
-    public void setAttributes(Map<String, Object> attributes) {
-        this.attributes = attributes;
-    }
-
     public Boolean isDeleted() {
         return deleted;
     }

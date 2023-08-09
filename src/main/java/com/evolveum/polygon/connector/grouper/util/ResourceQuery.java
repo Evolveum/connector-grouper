@@ -32,9 +32,7 @@ public class ResourceQuery {
 
         this.objectClass = objectClass;
         this.columnInformation = columnInformation;
-
     }
-
     public ObjectClass getObjectClass() {
         return objectClass;
     }
@@ -75,13 +73,7 @@ public class ResourceQuery {
     public void addOperator(String operator) {
 
         setCurrentQuerySnippet(operator + " (" + getCurrentQuerySnippet() + ")");
-
     }
-
-    public boolean isComposite() {
-        return isComposite;
-    }
-
     public void setComposite(boolean composite) {
         isComposite = composite;
     }

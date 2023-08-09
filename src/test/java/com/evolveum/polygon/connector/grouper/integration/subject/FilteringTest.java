@@ -49,8 +49,29 @@ public class FilteringTest extends CommonTestClass {
         }
     }
 
+    @Test()
+    public void fetchAllMaxPaging() {
 
-    //TODO test
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME);
+        ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration.setEnableIdBasedPaging(true);
+        grouperConfiguration.setMaxPageSize(2);
+
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        grouperConnector.executeQuery(objectClassSubject, null, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
+    }
+
     @Test()
     public void fetchAllPagedCookie() {
 
@@ -122,7 +143,7 @@ public class FilteringTest extends CommonTestClass {
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
-                "82"));
+                "87"));
 
         grouperConnector.executeQuery(objectClassSubject, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
@@ -135,7 +156,7 @@ public class FilteringTest extends CommonTestClass {
                     obj.getName(), obj.getValue()));
             LOG.info("### END ###");
 
-            Assert.assertEquals(result.getUid().getUidValue(), "82");
+            Assert.assertEquals(result.getUid().getUidValue(), "87");
         }
     }
 
@@ -148,7 +169,7 @@ public class FilteringTest extends CommonTestClass {
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
-                "103"));
+                "87"));
 
         grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
@@ -160,7 +181,34 @@ public class FilteringTest extends CommonTestClass {
                     obj.getName(), obj.getValue()));
             LOG.info("### END ###");
 
-            Assert.assertEquals(result.getUid().getUidValue(), "103");
+            Assert.assertEquals(result.getUid().getUidValue(), "87");
+        }
+    }
+
+    @Test()
+    public void equalsUIDAndAttributesToGetMaxPageSize() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME,
+                true);
+        grouperConfiguration.setEnableIdBasedPaging(true);
+        grouperConfiguration.setMaxPageSize(2);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
+                "87"));
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            Assert.assertEquals(result.getUid().getUidValue(), "87");
         }
     }
 
@@ -168,6 +216,42 @@ public class FilteringTest extends CommonTestClass {
     public void containsUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        ContainsFilter filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
+                "1"));
+
+        grouperConnector.executeQuery(new ObjectClass(SUBJECT_NAME), filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+        boolean isOK = true;
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            String uid = result.getUid().getUidValue();
+
+            if (uid.contains("1")) {
+            } else {
+                isOK = false;
+            }
+
+        }
+
+        Assert.assertTrue(isOK);
+    }
+
+    @Test()
+    public void containsUIDAndAttributesToGetMaxPaging() {
+
+        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        Integer maxPageSize = grouperConfiguration.getMaxPageSize();
+        Integer pageSize = null;
+
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 

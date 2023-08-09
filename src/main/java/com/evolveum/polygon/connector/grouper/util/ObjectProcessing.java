@@ -21,15 +21,11 @@ import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 
 public abstract class ObjectProcessing {
     private static final Log LOG = Log.getLog(ObjectProcessing.class);
-
     public static final String SUBJECT_NAME = "Subject";
     protected static final String ATTR_MODIFIED = "last_modified";
     protected static final String TABLE_MEMBERSHIP_NAME = "gr_mp_memberships";
@@ -40,6 +36,7 @@ public abstract class ObjectProcessing {
     protected static final String ATTR_DELETED = "deleted";
     protected static final String ATTR_DELETED_TRUE = "T";
     protected static final String ATTR_MODIFIED_LATEST = "latest_timestamp";
+    private static final String _COUNT = "count";
     protected GrouperConfiguration configuration;
 
     protected Map<String, Class> objectColumns = Map.ofEntries(
@@ -105,12 +102,10 @@ public abstract class ObjectProcessing {
 
         }
 
-
         ResultSetMetaData meta = resultSet.getMetaData();
 
         int count = meta.getColumnCount();
         LOG.ok("Number of columns returned from result set object: {0}", count);
-        // TODO Based on options the handling might be paginated
         // options
 
         for (int i = 1; i <= count; i++) {
@@ -198,8 +193,8 @@ public abstract class ObjectProcessing {
 
                         saturateExtensionAttribute = false;
 
-                        LOG.info("Object" + name_name != null ? " " + name_name + " extension attribute row was marked as" +
-                                " deleted" : "membership column was marked as deleted");
+                        LOG.info("Object" + name_name != null ? " " + name_name + " extension attribute row was " +
+                                "marked as deleted" : "membership column was marked as deleted");
                     }
 
                 }
@@ -311,7 +306,7 @@ public abstract class ObjectProcessing {
     protected ConnectorObjectBuilder buildConnectorObject(ObjectClass o_class, GrouperObject grouperObject,
                                                           OperationOptions oo) {
 
-        LOG.ok("Processing trough the buildConnectorObject method for grouper object {0}, of object class {1}",
+        LOG.ok("Processing through the buildConnectorObject method for grouper object {0}, of object class {1}",
                 grouperObject.getIdentifier(), o_class);
         ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
         builder.setObjectClass(o_class);
@@ -320,9 +315,6 @@ public abstract class ObjectProcessing {
         builder.setName(grouperObject.getName());
 
         Map<String, Object> attrs = grouperObject.getAttributes();
-
-        //TODO remove
-        LOG.ok("Building object: {0}", grouperObject.getIdentifier());
 
         for (String name : attrs.keySet()) {
 
@@ -384,13 +376,70 @@ public abstract class ObjectProcessing {
         return true;
     }
 
+    public abstract LinkedHashMap<String, GrouperObject> sync(SyncToken syncToken, OperationOptions operationOptions,
+                                                              Connection connection, QueryBuilder query);
+
     protected abstract void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler,
                                  OperationOptions operationOptions, Connection connection);
 
-    protected abstract Map<String, GrouperObject> sync(SyncToken syncToken,
-                                                       OperationOptions operationOptions,
-                                                       Connection connection);
+    protected Integer countAll(QueryBuilder queryBuilder, Connection connection) {
+        Integer count = null;
+        queryBuilder.asCount();
+        ResultSet result;
 
+        try {
+            PreparedStatement prepareStatement = connection.prepareStatement(queryBuilder.build());
+            result = prepareStatement.executeQuery();
+
+            while (result.next()) {
+
+                ResultSetMetaData meta = result.getMetaData();
+
+                int columnCount = meta.getColumnCount();
+
+                for (int i = 1; i <= columnCount; i++) {
+                    String name = meta.getColumnName(i);
+
+                    if (_COUNT.equalsIgnoreCase(name)) {
+                        count = result.getInt(name);
+                    }
+                }
+            }
+
+            LOG.ok("The number of rows: {0}", count);
+
+        } catch (SQLException e) {
+
+            throw new ExceptionHandler().evaluateAndHandleException(e, true, false,
+                    "Exception occurred during 'count all' procedure");
+        }
+
+        return count;
+    }
 
     public abstract Long getLatestSyncToken(Connection connection);
+
+    protected void handleLargerThanMaxSize(ObjectClass oClass, SyncResultsHandler syncResultsHandler,
+                                           SyncToken syncToken, QueryBuilder syncQueryBuilder,
+                                           OperationOptions operationOptions, Connection connection,
+                                           Integer totalRows, Integer maxPageSize) {
+
+        for (int i = 0; totalRows >= i; i = i + maxPageSize) {
+
+            syncQueryBuilder.setPageSize(maxPageSize);
+            syncQueryBuilder.setPageOffset(i + 1);
+
+            Map<String, GrouperObject> objectMap = sync(syncToken, operationOptions, connection,
+                    syncQueryBuilder);
+
+            for (String objID : objectMap.keySet()) {
+                GrouperObject grouperObject = objectMap.get(objID);
+
+                if (!sync(syncResultsHandler, oClass, grouperObject)) {
+
+                    break;
+                }
+            }
+        }
+    }
 }

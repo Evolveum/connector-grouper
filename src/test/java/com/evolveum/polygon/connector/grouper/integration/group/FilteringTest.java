@@ -54,6 +54,33 @@ public class FilteringTest extends CommonTestClass {
     }
 
     @Test()
+    public void fetchAllMaxPaging() {
+
+        LOG.ok("Execution of fetch all test for the Group object class");
+
+        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME);
+
+        grouperConfiguration.setEnableIdBasedPaging(true);
+        grouperConfiguration.setMaxPageSize(2);
+
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        grouperConnector.executeQuery(ObjectClass.GROUP, null, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+        }
+
+    }
+
+    @Test()
     public void fetchAllPagedCookie() {
 
         OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, false,
@@ -169,6 +196,34 @@ public class FilteringTest extends CommonTestClass {
     }
 
     @Test()
+    public void equalsUIDAndAttributesToGetMaxPageSize() {
+
+        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        grouperConfiguration.setEnableIdBasedPaging(true);
+        grouperConfiguration.setMaxPageSize(2);
+
+        grouperConnector.init(grouperConfiguration);
+        TestSearchResultsHandler handler = getSearchResultHandler();
+
+        EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
+                "34"));
+
+        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        ArrayList<ConnectorObject> results = handler.getResult();
+
+
+        for (ConnectorObject result : results) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result.getName());
+            result.getAttributes().forEach(obj -> LOG.info("The attribute: {0}, with value {1}",
+                    obj.getName(), obj.getValue()));
+            LOG.info("### END ###");
+
+            Assert.assertEquals(result.getUid().getUidValue(), "34");
+        }
+    }
+
+    @Test()
     public void andOrContainsUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
@@ -255,7 +310,7 @@ public class FilteringTest extends CommonTestClass {
     public void andOrContainsUIDAndAttributesToGetWithPageCookie() {
 
         OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true,
-                "50", 0, 20);
+                "15", 0, 20);
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 

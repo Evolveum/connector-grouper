@@ -122,23 +122,41 @@ public class SubjectProcessing extends ObjectProcessing {
 
     public void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
             , Connection connection) {
-        LOG.ok("Processing trough executeQuery methods for the object class {0}",
+        LOG.ok("Processing through executeQuery methods for the object class {0}",
                 SUBJECT_NAME);
-        QueryBuilder queryBuilder = null;
+        QueryBuilder queryBuilder;
+        Boolean isEqualsUid = false;
+        Boolean isAllQuery = !(filter != null);
+        Boolean isPagedSearch = false;
+        Integer maxPageSize = configuration.getMaxPageSize();
+        Integer pageSize = null;
+
+        if (filter != null && filter instanceof EqualsFilter) {
+
+            if (((EqualsFilter) filter).getAttribute().getName().equals(Uid.NAME)) {
+                isEqualsUid = true;
+            }
+        }
 
         List<String> extended = configuration.getExtendedSubjectProperties() != null ?
                 Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
 
+        if (operationOptions != null && operationOptions.getPageSize() != null) {
+
+            isPagedSearch = configuration.getEnableIdBasedPaging();
+        }
+
         if (configuration.getExcludeDeletedObjects()) {
-            if (filter != null) {
+            if (!isAllQuery) {
                 LOG.ok("Augmenting filter {0}, " +
                         "with DELETED=F argument based on the exclude delete objects property value", filter);
 
                 EqualsFilter equalsFilter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(
                         TABLE_SU_NAME + "." + ATTR_DELETED, "F"));
-                filter = FilterBuilder.and(equalsFilter, filter);
 
+                filter = FilterBuilder.and(equalsFilter, filter);
             } else {
+
                 LOG.ok("Augmenting empty filter with DELETED=F argument based on the exclude delete objects property " +
                         "value");
 
@@ -148,7 +166,8 @@ public class SubjectProcessing extends ObjectProcessing {
         }
 
         if (getAttributesToGet(operationOptions) != null &&
-                (!getAttributesToGet(operationOptions).isEmpty() && filter != null)) {
+                (!getAttributesToGet(operationOptions).isEmpty() && !isAllQuery
+                        && !isPagedSearch)) {
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
             Map<Map<String, String>, String> joinMap = new HashMap<>();
@@ -176,8 +195,47 @@ public class SubjectProcessing extends ObjectProcessing {
                     TABLE_SU_NAME, operationOptions);
         }
         queryBuilder.setUseFullAlias(true);
+        Integer count = null;
+        if (maxPageSize != null && !isEqualsUid) {
+
+            if (pageSize != null) {
+
+                if (pageSize > maxPageSize) {
+
+                    count = countAll(queryBuilder.clone(), connection);
+                    queryBuilder.setTotalCount(count);
+                }
+            } else {
+
+                count = countAll(queryBuilder.clone(), connection);
+                queryBuilder.setTotalCount(count);
+            }
+        }
+
+        if (count == null) {
+
+            handleExecuteQuery(handler, connection, queryBuilder, isAllQuery, isPagedSearch, operationOptions);
+
+        } else {
+            if (count < maxPageSize) {
+
+                handleExecuteQuery(handler, connection, queryBuilder, isAllQuery, isPagedSearch, operationOptions);
+            } else {
+                for (int i = 0; count >= i; i = i + maxPageSize) {
+
+                    queryBuilder.setPageSize(maxPageSize);
+                    queryBuilder.setPageOffset(i + 1);
+
+                    handleExecuteQuery(handler, connection, queryBuilder, isAllQuery, isPagedSearch, operationOptions);
+                }
+            }
+        }
+    }
+
+    protected void handleExecuteQuery(ResultsHandler handler, Connection connection, QueryBuilder queryBuilder,
+                                      Boolean isAllQuery, Boolean isPagedSearch, OperationOptions operationOptions) {
+        ResultSet result;
         String query = queryBuilder.build();
-        ResultSet result = null;
 
         LOG.info("Query about to be executed: {0}", query);
         Map<String, GrouperObject> objects = new HashMap<>();
@@ -188,41 +246,33 @@ public class SubjectProcessing extends ObjectProcessing {
 
             while (result.next()) {
 
-                {
+                GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
+                        multiValuedAttributesCatalogue, Map.of(ATTR_MEMBER_OF_NATIVE, ATTR_MEMBER_OF));
 
-                    Map<String, Class> mergedColumns = new HashMap<>();
-                    mergedColumns.putAll(columns);
-                    mergedColumns.putAll(suMembershipColumns);
-                    mergedColumns.putAll(extensionColumns);
+                go.setObjectClass(O_CLASS);
 
-                    GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
-                            multiValuedAttributesCatalogue, Map.of(ATTR_MEMBER_OF_NATIVE, ATTR_MEMBER_OF));
-                    go.setObjectClass(O_CLASS);
+                if (objects.isEmpty()) {
+                    objects.put(go.getIdentifier(), go);
 
-                    if (objects.isEmpty()) {
-                        objects.put(go.getIdentifier(), go);
+                } else {
+                    String objectID = go.getIdentifier();
+
+                    if (objects.containsKey(objectID)) {
+
+                        GrouperObject mapObject = objects.get(objectID);
+
+                        Map<String, Object> attrMap = go.getAttributes();
+
+                        for (String attName : attrMap.keySet()) {
+
+                            mapObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
+
+                        }
 
                     } else {
-                        String objectID = go.getIdentifier();
 
-                        if (objects.containsKey(objectID)) {
-
-                            GrouperObject mapObject = objects.get(objectID);
-
-                            Map<String, Object> attrMap = go.getAttributes();
-
-                            for (String attName : attrMap.keySet()) {
-
-                                mapObject.addAttribute(attName, attrMap.get(attName), multiValuedAttributesCatalogue);
-
-                            }
-
-                        } else {
-
-                            objects.put(go.getIdentifier(), go);
-                        }
+                        objects.put(go.getIdentifier(), go);
                     }
-
                 }
             }
 
@@ -230,6 +280,10 @@ public class SubjectProcessing extends ObjectProcessing {
             if (objects.isEmpty()) {
                 LOG.ok("Empty object set in execute query");
             } else {
+
+                if (!isAllQuery && isPagedSearch) {
+                    objects = fetchFullObjects(objects, operationOptions, connection);
+                }
 
                 Integer sizeS = objects.size();
                 Integer processed = 0;
@@ -240,17 +294,9 @@ public class SubjectProcessing extends ObjectProcessing {
                     LOG.info("The object: {0}", objects.get(objectName).toString());
 
                     GrouperObject go = objects.get(objectName);
-                    //TODO revise
-                    if (configuration.getExcludeDeletedObjects()) {
-                        if (go.isDeleted()) {
-                            LOG.ok("Following object omitted from evaluation, because it's deleted, identifier: "
-                                    + go.getIdentifier());
-
-                            continue;
-                        }
-                    }
 
                     ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
+
                     pseudoCookie = go.getIdentifier();
                     if (!handler.handle(co.build())) {
 
@@ -270,11 +316,12 @@ public class SubjectProcessing extends ObjectProcessing {
 
                     processed++;
                 }
-                //TODO test handling for each result
+
                 if (handler instanceof SearchResultsHandler) {
 
                     LOG.ok("Handling results with pseudoCookie: {0}", pseudoCookie);
                     LOG.ok("Remaining page results: {0}", sizeS - processed);
+
                     SearchResult searchResult = new SearchResult(pseudoCookie, -1);
                     ((SearchResultsHandler) handler).handleResult(searchResult);
                 }
@@ -283,7 +330,7 @@ public class SubjectProcessing extends ObjectProcessing {
         } catch (SQLException e) {
 
             String errMessage = "Exception occurred during the Execute query operation while processing the query: "
-                    + query + ". The object class being handled: " + O_CLASS + "." ;
+                    + query + ". The object class being handled: " + O_CLASS + ".";
 
             throw new ExceptionHandler().evaluateAndHandleException(e, true, false, errMessage);
 
@@ -313,26 +360,60 @@ public class SubjectProcessing extends ObjectProcessing {
     @Override
     public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions,
                      Connection connection) {
-        Map<String, GrouperObject> objectMap = sync(syncToken, operationOptions, connection);
+
+        QueryBuilder syncQueryBuilder = syncQuery(syncToken, operationOptions, connection);
+        Integer totalCount = syncQueryBuilder.getTotalCount();
 
         SyncDeltaBuilder builder = new SyncDeltaBuilder();
         builder.setObjectClass(O_CLASS);
 
-        for (String objID : objectMap.keySet()) {
-            GrouperObject grouperObject = objectMap.get(objID);
+        if (totalCount != null) {
 
-            if (!sync(syncResultsHandler, O_CLASS, grouperObject)) {
+            Integer maxPageSize = configuration.getMaxPageSize();
+            Integer pageSize = null;
 
-                break;
+            if (operationOptions.getOptions().containsKey(OperationOptions.OP_PAGE_SIZE)) {
+
+                pageSize = operationOptions.getPageSize();
+            }
+
+            if (pageSize != null) {
+
+                if (pageSize > maxPageSize) {
+
+                    handleLargerThanMaxSize(O_CLASS, syncResultsHandler, syncToken, syncQueryBuilder,
+                            operationOptions, connection, totalCount, maxPageSize);
+                }
+            } else {
+
+                if (totalCount > maxPageSize) {
+
+                    handleLargerThanMaxSize(O_CLASS, syncResultsHandler, syncToken, syncQueryBuilder,
+                            operationOptions, connection, totalCount, maxPageSize);
+                }
+            }
+
+        } else {
+
+            Map<String, GrouperObject> objectMap = sync(syncToken, operationOptions, connection, syncQueryBuilder);
+
+            for (String objID : objectMap.keySet()) {
+                GrouperObject grouperObject = objectMap.get(objID);
+
+                if (!sync(syncResultsHandler, O_CLASS, grouperObject)) {
+
+                    break;
+                }
             }
         }
     }
 
     @Override
     public LinkedHashMap<String, GrouperObject> sync(SyncToken syncToken, OperationOptions operationOptions,
-                                                     Connection connection) {
-        QueryBuilder queryBuilder;
+                                                     Connection connection, QueryBuilder queryBuilder) {
+
         LinkedHashMap<String, GrouperObject> objects = new LinkedHashMap<>();
+
         String tokenVal;
         if (syncToken.getValue() instanceof Long) {
 
@@ -341,92 +422,13 @@ public class SubjectProcessing extends ObjectProcessing {
             tokenVal = (String) syncToken.getValue();
         }
 
-
-        LOG.ok("The sync token value in the evaluation of subject processing sync method: {0}", tokenVal);
-
-        GreaterThanFilter greaterThanFilterBase = (GreaterThanFilter)
-                FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_NAME + "." + ATTR_MODIFIED,
-                        tokenVal));
-
-        GreaterThanFilter greaterThanFilterMember = null;
-
-        GreaterThanFilter greaterThanFilterExtension = null;
-
-
-        Filter filter = greaterThanFilterBase;
-
-        List<String> extended = configuration.getExtendedSubjectProperties() != null ?
-                Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
-
-        if (getAttributesToGet(operationOptions) != null &&
-                !getAttributesToGet(operationOptions).isEmpty()) {
-
-
-            Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
-            Map<Map<String, String>, String> joinMap = new HashMap<>();
-
-            tablesAndColumns.put(TABLE_SU_NAME, Map.of(ATTR_DELETED, String.class,
-                    ATTR_ID_IDX, Long.class, ATTR_MODIFIED, Long.class));
-
-            Set<String> attrsToGet = getAttributesToGet(operationOptions);
-
-
-            if (attrsToGet.contains(ATTR_MEMBER_OF)) {
-
-                greaterThanFilterMember = (GreaterThanFilter)
-                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME + "." + ATTR_MODIFIED,
-                                tokenVal));
-
-                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, objectColumns);
-
-                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
-            }
-
-            if (attrsToGet.stream().anyMatch(atg -> extended.contains(atg))) {
-
-                greaterThanFilterExtension = (GreaterThanFilter)
-                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_EXTENSION_NAME + "." + ATTR_MODIFIED,
-                                tokenVal));
-
-                tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, objectColumns);
-                joinMap.put(Map.of(TABLE_SU_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
-            }
-
-            if (greaterThanFilterMember != null && greaterThanFilterExtension != null) {
-
-                filter = FilterBuilder.or(greaterThanFilterMember, greaterThanFilterBase,
-                        greaterThanFilterExtension);
-            } else if (greaterThanFilterMember != null) {
-
-                filter = FilterBuilder.or(greaterThanFilterMember, greaterThanFilterBase);
-            } else if (greaterThanFilterExtension != null) {
-
-                filter = FilterBuilder.or(greaterThanFilterBase,
-                        greaterThanFilterExtension);
-            }
-
-            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter,
-                    tablesAndColumns, TABLE_SU_NAME, joinMap, operationOptions);
-        } else {
-
-            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, Map.of(TABLE_SU_NAME, columns),
-                    TABLE_SU_NAME, operationOptions);
-        }
-        queryBuilder.setUseFullAlias(true);
-        queryBuilder.setOrderByASC(CollectionUtil.newSet(ATTR_MODIFIED_LATEST));
-        queryBuilder.setAsSyncQuery(true);
-
-        String query = queryBuilder.build();
-
         ResultSet result = null;
 
-
         try {
-            PreparedStatement prepareStatement = connection.prepareStatement(query);
+            PreparedStatement prepareStatement = connection.prepareStatement(queryBuilder.build());
             result = prepareStatement.executeQuery();
 
             while (result.next()) {
-
 
                 GrouperObject go = buildGrouperObject(ATTR_UID, ATTR_NAME, result, objectConstructionSchema,
                         multiValuedAttributesCatalogue, null);
@@ -476,7 +478,7 @@ public class SubjectProcessing extends ObjectProcessing {
                 }
 
                 if (!notDeletedObjects.isEmpty()) {
-                    notDeletedObjects = fetchFullNonDeletedObjects(notDeletedObjects, operationOptions, connection);
+                    notDeletedObjects = fetchFullObjects(notDeletedObjects, operationOptions, connection);
                 }
 
                 for (String id : objects.keySet()) {
@@ -569,8 +571,8 @@ public class SubjectProcessing extends ObjectProcessing {
         throw new ConnectorException("Latest sync token could not be fetched.");
     }
 
-    private Map<String, GrouperObject> fetchFullNonDeletedObjects(Map<String, GrouperObject> notDeletedObject,
-                                                                  OperationOptions operationOptions, Connection connection) {
+    private Map<String, GrouperObject> fetchFullObjects(Map<String, GrouperObject> notDeletedObject,
+                                                        OperationOptions operationOptions, Connection connection) {
 
         QueryBuilder queryBuilder;
 
@@ -608,11 +610,11 @@ public class SubjectProcessing extends ObjectProcessing {
             }
 
             queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), null,
-                    tablesAndColumns, TABLE_SU_NAME, joinMap, operationOptions);
+                    tablesAndColumns, TABLE_SU_NAME, joinMap, null);
         } else {
 
             queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), null, Map.of(TABLE_SU_NAME, columns),
-                    TABLE_SU_NAME, operationOptions);
+                    TABLE_SU_NAME, null);
         }
 
         queryBuilder.setUseFullAlias(true);
@@ -711,5 +713,120 @@ public class SubjectProcessing extends ObjectProcessing {
         }
 
         return extensionAttributeNames;
+    }
+
+    public QueryBuilder syncQuery(SyncToken syncToken, OperationOptions operationOptions, Connection connection) {
+        QueryBuilder queryBuilder;
+
+        String tokenVal;
+
+        Integer maxPageSize = configuration.getMaxPageSize();
+        Integer pageSize = null;
+
+        if (operationOptions.getOptions().containsKey(OperationOptions.OP_PAGE_SIZE)) {
+
+            pageSize = operationOptions.getPageSize();
+        }
+
+        if (syncToken.getValue() instanceof Long) {
+
+            tokenVal = Long.toString((Long) syncToken.getValue());
+        } else {
+            tokenVal = (String) syncToken.getValue();
+        }
+
+
+        LOG.ok("The sync token value in the evaluation of subject processing sync method: {0}", tokenVal);
+
+        GreaterThanFilter greaterThanFilterBase = (GreaterThanFilter)
+                FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_NAME + "." + ATTR_MODIFIED,
+                        tokenVal));
+
+        GreaterThanFilter greaterThanFilterMember = null;
+
+        GreaterThanFilter greaterThanFilterExtension = null;
+
+
+        Filter filter = greaterThanFilterBase;
+
+        List<String> extended = configuration.getExtendedSubjectProperties() != null ?
+                Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
+
+        if (getAttributesToGet(operationOptions) != null &&
+                !getAttributesToGet(operationOptions).isEmpty()) {
+
+            Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
+            Map<Map<String, String>, String> joinMap = new HashMap<>();
+
+            tablesAndColumns.put(TABLE_SU_NAME, Map.of(ATTR_DELETED, String.class,
+                    ATTR_ID_IDX, Long.class, ATTR_MODIFIED, Long.class));
+
+            Set<String> attrsToGet = getAttributesToGet(operationOptions);
+
+
+            if (attrsToGet.contains(ATTR_MEMBER_OF)) {
+
+                greaterThanFilterMember = (GreaterThanFilter)
+                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_MEMBERSHIP_NAME + "." + ATTR_MODIFIED,
+                                tokenVal));
+
+                tablesAndColumns.put(TABLE_MEMBERSHIP_NAME, Map.of(ATTR_MODIFIED, Long.class));
+
+                joinMap.put(Map.of(TABLE_MEMBERSHIP_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (attrsToGet.stream().anyMatch(atg -> extended.contains(atg))) {
+
+                greaterThanFilterExtension = (GreaterThanFilter)
+                        FilterBuilder.greaterThan(AttributeBuilder.build(TABLE_SU_EXTENSION_NAME + "." + ATTR_MODIFIED,
+                                tokenVal));
+
+                tablesAndColumns.put(TABLE_SU_EXTENSION_NAME, Map.of(ATTR_MODIFIED, Long.class));
+                joinMap.put(Map.of(TABLE_SU_EXTENSION_NAME, ATTR_SCT_ID_IDX), ATTR_ID_IDX);
+            }
+
+            if (greaterThanFilterMember != null && greaterThanFilterExtension != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterMember, greaterThanFilterBase,
+                        greaterThanFilterExtension);
+            } else if (greaterThanFilterMember != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterMember, greaterThanFilterBase);
+            } else if (greaterThanFilterExtension != null) {
+
+                filter = FilterBuilder.or(greaterThanFilterBase,
+                        greaterThanFilterExtension);
+            }
+
+            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter,
+                    tablesAndColumns, TABLE_SU_NAME, joinMap, operationOptions);
+        } else {
+
+            queryBuilder = new QueryBuilder(new ObjectClass(SUBJECT_NAME), filter, Map.of(TABLE_SU_NAME, columns),
+                    TABLE_SU_NAME, operationOptions);
+        }
+        queryBuilder.setUseFullAlias(true);
+        queryBuilder.setOrderByASC(CollectionUtil.newSet(ATTR_MODIFIED_LATEST));
+        queryBuilder.setAsSyncQuery(true);
+
+
+        if (maxPageSize != null) {
+
+            if (pageSize != null) {
+
+                if (pageSize > maxPageSize) {
+
+                    Integer count = countAll(queryBuilder.clone(), connection);
+                    queryBuilder.setTotalCount(count);
+                }
+            } else {
+
+                Integer count = countAll(queryBuilder.clone(), connection);
+                queryBuilder.setTotalCount(count);
+            }
+        }
+
+        return queryBuilder;
+
     }
 }

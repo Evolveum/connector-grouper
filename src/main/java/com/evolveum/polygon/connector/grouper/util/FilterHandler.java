@@ -25,8 +25,6 @@ import java.util.*;
 public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery> {
 
     private static final String EQUALS_OP = "=";
-    private static final String NOT_EQUALS_OP = "!=";
-    // Relational operators
     private static final String LESS_OP = "<";
     private static final String GREATER_OP = ">";
     private static final String LESS_OR_EQ_OP = "<=";
@@ -38,15 +36,11 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
     private static final String OR_OP = "OR";
     private static final String NOT_OP = "NOT";
     // DELIMITER
-    private static final String _L_PAR = "(";
-    private static final String _R_PAR = ")";
-    private static final String _COL = ",";
+
     private static final String _S_COL_VALUE_WRAPPER = "'";
     private static final String _PADDING = " ";
 
-    private static final String _IN = "IN";
     private static final String _LIKE = "LIKE";
-    private static final String _EXISTS = "EXISTS";
     private static final Log LOG = Log.getLog(FilterHandler.class);
 
     @Override

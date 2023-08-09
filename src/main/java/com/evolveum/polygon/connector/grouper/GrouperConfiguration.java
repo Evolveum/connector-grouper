@@ -199,7 +199,6 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.excludeDeletedObjects = excludeDeletedObjects;
     }
 
-    //TODO, pagination switch
     @ConfigurationProperty(order = 11, displayMessageKey = "enableIdBasedPaging.display",
             helpMessageKey = "enableIdBasedPaging.help")
 
@@ -211,7 +210,6 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.enableIdBasedPaging = enableIdBasedPaging;
     }
 
-    //TODO, pagination switch
     @ConfigurationProperty(order = 12, displayMessageKey = "maxPageSize.display",
             helpMessageKey = "maxPageSize.help")
 

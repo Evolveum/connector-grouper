@@ -43,6 +43,7 @@ public class PropertiesParser {
     private static final String _EXTENDED_PROPERTIES_GROUP = "extendedGroupProperties";
     private static final String _ENABLE_ID_BASED_PAGING = "enableIdBasedPaging";
     private static final String _EXCLUDE_DELETED = "excludeDeletedObjects";
+    private static final String _MAX_PAGE_SIZE = "maxPageSize";
 
     public PropertiesParser() {
 
@@ -115,6 +116,17 @@ public class PropertiesParser {
         }
 
         return values;
+    }
+
+    public Integer getMaxPageSize() {
+        String maxSize = (String) PROPERTIES.get(_MAX_PAGE_SIZE);
+
+        if (maxSize.isBlank()) {
+
+            return null;
+        }
+
+        return Integer.parseInt(maxSize);
     }
 
 }

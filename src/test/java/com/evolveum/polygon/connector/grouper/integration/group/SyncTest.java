@@ -48,6 +48,26 @@ public class SyncTest extends CommonTestClass {
     }
 
     @Test()
+    public void syncTestMaxPaging() {
+
+        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        ObjectClass objectClassGroup = new ObjectClass(ObjectClass.GROUP_NAME);
+        grouperConfiguration.setEnableIdBasedPaging(true);
+        grouperConfiguration.setMaxPageSize(2);
+        grouperConnector.init(grouperConfiguration);
+        TestSyncResultsHandler handler = getSyncResultHandler();
+
+        grouperConnector.sync(objectClassGroup, new SyncToken(1684824672269L),
+                handler, options);
+
+        for (SyncDelta result : handler.getResult()) {
+
+            LOG.info("### START ### Attribute set for the object {0}", result);
+            LOG.info("### END ###");
+        }
+    }
+
+    @Test()
     public void latestSyncTokenTest() {
 
         OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);

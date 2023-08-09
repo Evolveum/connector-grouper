@@ -56,7 +56,13 @@ public class QueryBuilder {
 
     private Set<String> groupByColumns = new HashSet<>();
     private Map<String, Set<String>> inStatement = new HashMap<>();
+    private Integer totalCount;
     private Integer offset;
+    private Integer pageSize;
+    private Integer pageOffset;
+    private String pageCookie;
+    private Filter filter;
+    private boolean asCount = false;
 
     public QueryBuilder(ObjectClass objectClass, String selectTable, Integer limit) {
 
@@ -87,6 +93,7 @@ public class QueryBuilder {
             this.translatedFilter = null;
         } else {
 
+            this.filter = filter;
             this.translatedFilter = filter.accept(new FilterHandler(),
                     new ResourceQuery(objectClass, columns));
         }
@@ -145,15 +152,21 @@ public class QueryBuilder {
             o_options = operationOptions.getOptions();
         }
         if (translatedFilter != null ||
-                (operationOptions != null && o_options.containsKey(OperationOptions.OP_PAGE_SIZE))) {
+                (operationOptions != null)) {
 
-            Integer pageSize = null;
-            Integer pageOffset = null;
-            String pageCookie = null;
+            if ((operationOptions != null && o_options.containsKey(OperationOptions.OP_PAGE_SIZE)) ||
+                    (pageSize != null && pageOffset != null)) {
 
-            if (operationOptions != null && o_options.containsKey(OperationOptions.OP_PAGE_SIZE)) {
-                pageSize = operationOptions.getPageSize();
-                pageOffset = operationOptions.getPagedResultsOffset();
+                if (pageSize != null) {
+
+                } else {
+                    pageSize = operationOptions.getPageSize();
+                }
+                if (pageOffset != null) {
+
+                } else {
+                    pageOffset = operationOptions.getPagedResultsOffset();
+                }
 
                 if (pageOffset != null && pageOffset != 0) {
 
@@ -183,8 +196,7 @@ public class QueryBuilder {
                 if (pageCookie != null) {
 
 
-                    statementString = statementString + " " + _WHERE + " " + selectTable + "."
-                            + idAttr + " > " + pageCookie;
+                    statementString = statementString + " " + _WHERE + " " + idAttr + " > " + pageCookie;
 
                     if (translatedFilter != null) {
 
@@ -305,6 +317,9 @@ public class QueryBuilder {
             statementString = statementString + " " + _OFFSET + " " + offset;
         }
 
+        if (asCount) {
+            statementString = statementString + ") AS cquery";
+        }
         LOG.ok("Using the following statement string in the select statement: {0}", statementString);
         return statementString;
     }
@@ -320,6 +335,10 @@ public class QueryBuilder {
 
         StringBuilder ret = new StringBuilder("SELECT ");
         Set<String> modColumns = new HashSet<>();
+
+        if (asCount) {
+            ret.append("COUNT(*) FROM ( SELECT ");
+        }
 
         if (tablesAndColumns == null) {
 
@@ -381,6 +400,7 @@ public class QueryBuilder {
             ret.append(buildOneFromMany(modColumns));
         }
 
+
         ret.append("FROM ");
         ret.append(selectTable);
         return ret.toString();
@@ -432,5 +452,36 @@ public class QueryBuilder {
         this.inStatement = inStatement;
     }
 
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
+    }
 
+    public void setPageOffset(Integer pageOffset) {
+        this.pageOffset = pageOffset;
+    }
+
+    public QueryBuilder clone() {
+
+        QueryBuilder clone = new QueryBuilder(objectClass, filter, columns, selectTable,
+                joinPair, operationOptions, limit);
+
+        clone.setAsSyncQuery(asSyncQuery);
+        clone.setOrderByASC(orderByASC);
+        clone.setUseFullAlias(useFullAlias);
+
+        return clone;
+    }
+
+    public void asCount() {
+
+        this.asCount = true;
+    }
+
+    public Integer getTotalCount() {
+        return totalCount;
+    }
+
+    public void setTotalCount(Integer totalCount) {
+        this.totalCount = totalCount;
+    }
 }
