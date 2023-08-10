@@ -32,20 +32,52 @@ import org.identityconnectors.framework.spi.operations.*;
 import java.sql.SQLException;
 import java.util.*;
 
+/**
+ * midPoint connector for InCommon Grouper
+ * <p>
+ * The connector acts as a read only connector. Capabilities include also live synchronization using
+ * a 'modified' time stamp column and 'deleted' colum for updates.
+ * <p>
+ * Connector reads data trough multiple database tables related to both supported object types. The rows related to
+ * a specific objects are then merged and from this a specific object is constructed and handled.
+ * <p>
+ *
+ * @author Matus Macik
+ * @since 1.0
+ */
 @ConnectorClass(displayNameKey = "grouper.connector.display", configurationClass = GrouperConfiguration.class)
 public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp,
         SyncOp {
 
+    /**
+     * Instance of Log, for logging of the class {@link GrouperConnector}.
+     */
     private static final Log LOG = Log.getLog(GrouperConnector.class);
 
+    /**
+     * Instance of {@link Configuration}. Initialized via callback at
+     * {@link GrouperConnector#init(Configuration)}
+     */
     private GrouperConfiguration configuration;
+
+    /**
+     * Instance of {@link GrouperConnection}. This class handles the connection to the grouper repository.
+     * The class created an instance of {@link java.sql.Connection} which is consumed by the underlying connector
+     * methods.
+     */
     private GrouperConnection grouperConnection;
 
+    /**
+     * Accessor for {@link Configuration}.
+     */
     @Override
     public Configuration getConfiguration() {
         return configuration;
     }
 
+    /**
+     * Initialization of basic connector parameters.
+     */
     @Override
     public void init(Configuration configuration) {
 
@@ -54,6 +86,9 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
     }
 
+    /**
+     * Cleanup method for connector.
+     */
     @Override
     public void dispose() {
         configuration = null;
@@ -63,6 +98,11 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         }
     }
 
+    /**
+     * Generated the schema for both object classes supported by the connector. The schema is partially hardcoded
+     * and partially might be dynamically computed based on extension attributes. Method uses a utility class instance
+     * of {@link SchemaTranslator} which handles the specifics.
+     */
     @Override
     public Schema schema() {
         LOG.info("Evaluating the schema operation");
@@ -71,6 +111,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         return translator.generateSchema(configuration);
 
     }
+
 
     @Override
     public FilterTranslator createFilterTranslator(ObjectClass objectClass, OperationOptions operationOptions) {
@@ -83,6 +124,12 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         };
     }
 
+    /**
+     * Method used to search the data source for object data. Method uses {@link Filter} type objects which are
+     * translated and execute as a native SQL query. Based on the {@link ObjectClass}, the specific tables and
+     * table data related to the concrete object class is selected. Based on the {@link OperationOptions}, the method
+     * might fetch auxiliary attributes and use pagination, based on this it will modify the native query and output data.
+     */
     @Override
     public void executeQuery(ObjectClass objectClass, Filter filter, ResultsHandler resultsHandler, OperationOptions
             operationOptions) {
@@ -125,6 +172,10 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         LOG.ok("Finished evaluating the execute query operation.");
     }
 
+    /**
+     * Basic test operation which uses a simple query to evaluate if the connector configuration is valid and
+     * the connection is working.
+     */
     @Override
     public void test() {
         LOG.info("Executing test operation.");
@@ -140,6 +191,12 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
     }
 
+    /**
+     * Method generates a set of initial configuration values. These can be used in the interaction with the remote
+     * system or can be overriden. Also the method produces a list of names of the auxiliary attributes present in the auxiliary
+     * attribute tables. It is then possible to choose from this list which attributes should be present in the
+     * resource schema.
+     */
     @Override
     public Map<String, SuggestedValues> discoverConfiguration() {
         Map<String, SuggestedValues> suggestions = new HashMap<>();
@@ -225,6 +282,15 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
     }
 
+    /**
+     * Implementation of SyncOP sync method. Method requests changes which are used for synchronization of data.
+     * Synchronization events are ordered based on a 'modified' time stamp column which values are
+     * used as the {@link SyncToken} value. The syncToken is used also in each call, when a query is generated to fetch
+     * rows marked with a time stamp value following the value of syncToken.
+     * Based on the {@link ObjectClass}, the specific tables and table data related to the concrete object class is
+     * selected. Based on the {@link OperationOptions}, the method might fetch auxiliary attributes and use pagination.
+     * The "deleted" column is used to mark objects or rows related to an object as removed.
+     */
     @Override
     public void sync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler,
                      OperationOptions operationOptions) {
@@ -406,6 +472,11 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         }
     }
 
+    /**
+     * Method fetches the latest "modified" time stamp value of the specific object class, and based on it
+     * creates and instance of {@link SyncToken}. In case of the "ALL" {@link ObjectClass}, the token will be the
+     * later one from the Subject and Group object classes compared.
+     */
     @Override
     public SyncToken getLatestSyncToken(ObjectClass objectClass) {
 
