@@ -160,7 +160,8 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
         }
 
-        if (objectClass.is(ObjectClass.GROUP_NAME)) {
+
+        if (objectClass.is(ObjectProcessing.GROUP_NAME)) {
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
 
             LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
@@ -179,6 +180,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     @Override
     public void test() {
         LOG.info("Executing test operation.");
+        configuration.validate();
         grouperConnection.test();
         grouperConnection.dispose();
 
@@ -231,8 +233,8 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         }
 
         suggestions.put("extendedGroupProperties", SuggestedValuesBuilder.buildOpen(
-                fetchExtensionAttributes(ObjectClass.GROUP) != null ?
-                        fetchExtensionAttributes(ObjectClass.GROUP).toArray(new String[0]) : null
+                fetchExtensionAttributes(GroupProcessing.O_CLASS) != null ?
+                        fetchExtensionAttributes(GroupProcessing.O_CLASS).toArray(new String[0]) : null
         ));
 
         suggestions.put("extendedSubjectProperties", SuggestedValuesBuilder.buildOpen(
@@ -246,7 +248,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     private Set<String> fetchExtensionAttributes(ObjectClass oClass) {
         LOG.info("Fetching extension attributes for the object class {0}", oClass);
 
-        if (oClass.equals(ObjectClass.GROUP)) {
+        if (oClass.equals(GroupProcessing.O_CLASS)) {
 
             GroupProcessing processing = new GroupProcessing(configuration);
 
@@ -304,8 +306,8 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             syncToken = getLatestSyncToken(objectClass);
         }
 
-        if (objectClass.is(ObjectClass.GROUP_NAME)) {
 
+        if (objectClass.is(ObjectProcessing.GROUP_NAME)) {
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
             groupProcessing.sync(syncToken, syncResultsHandler, operationOptions, grouperConnection.getConnection());
 
@@ -449,9 +451,10 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             for (String id : mergedMap.keySet()) {
 
                 GrouperObject go = mergedMap.get(id);
-                if (go.getObjectClass().is(ObjectClass.GROUP_NAME)) {
 
-                    if (!groupProcessing.sync(syncResultsHandler, ObjectClass.GROUP, go)) {
+                    if (go.getObjectClass().is(ObjectProcessing.GROUP_NAME)) {
+
+                    if (!groupProcessing.sync(syncResultsHandler, GroupProcessing.O_CLASS, go)) {
 
                         break;
                     }
@@ -467,7 +470,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         } else {
 
             throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
-                    "Only " + ObjectClass.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
+                    "Only " + GroupProcessing.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
                     "is supported for SyncOp currently.");
         }
     }
@@ -480,7 +483,8 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     @Override
     public SyncToken getLatestSyncToken(ObjectClass objectClass) {
 
-        if (objectClass.is(ObjectClass.GROUP_NAME)) {
+
+        if (objectClass.is(ObjectProcessing.GROUP_NAME)) {
 
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
 
@@ -511,7 +515,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         } else {
 
             throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
-                    "Only " + ObjectClass.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
+                    "Only " + GroupProcessing.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
                     "is supported for SyncOp currently.");
         }
     }

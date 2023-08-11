@@ -57,7 +57,7 @@
             <intent>default</intent>
             <displayName>Default Account</displayName>
             <default>true</default>
-            <objectClass>ri:CustomSubjectObjectClass</objectClass>
+            <objectClass>ri:subject</objectClass>
 
             <focus>
                 <type>c:UserType</type>
@@ -177,7 +177,7 @@
             <intent>group</intent>
             <displayName>Group</displayName>
             <default>true</default>
-            <objectClass>ri:GroupObjectClass</objectClass>
+            <objectClass>ri:group</objectClass>
 
             <focus>
                 <type>c:RoleType</type>

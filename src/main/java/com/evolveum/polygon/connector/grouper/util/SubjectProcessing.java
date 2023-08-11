@@ -73,9 +73,10 @@ public class SubjectProcessing extends ObjectProcessing {
     public void buildObjectClass(SchemaBuilder schemaBuilder, GrouperConfiguration configuration) {
         LOG.info("Building object class definition for {0}", SUBJECT_NAME);
 
-        ObjectClass objectClass = new ObjectClass(SUBJECT_NAME);
         ObjectClassInfoBuilder subjectObjClassBuilder = new ObjectClassInfoBuilder();
-        subjectObjClassBuilder.setType(objectClass.getObjectClassValue());
+
+        subjectObjClassBuilder.setType("subject");
+
 
         //Read-only,
         AttributeInfoBuilder id = new AttributeInfoBuilder(Name.NAME);
@@ -518,7 +519,7 @@ public class SubjectProcessing extends ObjectProcessing {
 
     @Override
     public Long getLatestSyncToken(Connection connection) {
-        LOG.ok("Processing through the 'getLatestSyncToken' method for the objectClass {0}", ObjectClass.GROUP);
+        LOG.ok("Processing through the 'getLatestSyncToken' method for the objectClass {0}", GroupProcessing.O_CLASS);
 
         Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
         Map<Map<String, String>, String> joinMap = new HashMap<>();

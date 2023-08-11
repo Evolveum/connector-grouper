@@ -16,6 +16,8 @@
 
 package com.evolveum.polygon.connector.grouper.integration.group;
 
+import com.evolveum.polygon.connector.grouper.util.GroupProcessing;
+import com.evolveum.polygon.connector.grouper.util.ObjectProcessing;
 import org.identityconnectors.framework.common.objects.filter.*;
 import util.CommonTestClass;
 import util.TestSearchResultsHandler;
@@ -35,11 +37,13 @@ public class FilteringTest extends CommonTestClass {
 
         LOG.ok("Execution of fetch all test for the Group object class");
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
+
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, null, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
 
@@ -58,15 +62,16 @@ public class FilteringTest extends CommonTestClass {
 
         LOG.ok("Execution of fetch all test for the Group object class");
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME);
 
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConfiguration.setEnableIdBasedPaging(true);
         grouperConfiguration.setMaxPageSize(2);
 
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, null, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
 
@@ -83,9 +88,10 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void fetchAllPagedCookie() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, false,
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, false,
                 "50", 0, 20);
-        ObjectClass objectClassGroup = new ObjectClass(ObjectClass.GROUP_NAME);
+        ObjectClass objectClassGroup = GroupProcessing.O_CLASS;
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -104,9 +110,10 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void fetchAllPagedNoCookie() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, false,
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, false,
                 null, 1, 20);
-        ObjectClass objectClassGroup = new ObjectClass(ObjectClass.GROUP_NAME);
+        ObjectClass objectClassGroup = GroupProcessing.O_CLASS;
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -127,11 +134,12 @@ public class FilteringTest extends CommonTestClass {
 
         LOG.ok("Execution of fetch all test for the Group object class");
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, null, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, null, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
 
@@ -148,14 +156,15 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void equalsUID() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
                 "34"));
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
 
@@ -173,14 +182,15 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void equalsUIDAndAttributesToGet() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
                 "34"));
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
 
@@ -198,7 +208,8 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void equalsUIDAndAttributesToGetMaxPageSize() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConfiguration.setEnableIdBasedPaging(true);
         grouperConfiguration.setMaxPageSize(2);
 
@@ -208,7 +219,7 @@ public class FilteringTest extends CommonTestClass {
         EqualsFilter filter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(Uid.NAME,
                 "34"));
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
 
@@ -226,7 +237,8 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void andOrContainsUIDAndAttributesToGet() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -241,7 +253,7 @@ public class FilteringTest extends CommonTestClass {
 
         OrFilter orFilter = (OrFilter) FilterBuilder.or(a1Filter, c3filter);
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, orFilter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, orFilter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -267,8 +279,9 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void andOrContainsUIDAndAttributesToGetWithPaging() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true,
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true,
                 null, 0, 20);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -283,7 +296,7 @@ public class FilteringTest extends CommonTestClass {
 
         OrFilter orFilter = (OrFilter) FilterBuilder.or(a1Filter, c3filter);
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, orFilter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, orFilter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -309,8 +322,9 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void andOrContainsUIDAndAttributesToGetWithPageCookie() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true,
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true,
                 "15", 0, 20);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -325,7 +339,7 @@ public class FilteringTest extends CommonTestClass {
 
         OrFilter orFilter = (OrFilter) FilterBuilder.or(a1Filter, c3filter);
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, orFilter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, orFilter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -351,14 +365,15 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void containsUIDAndAttributesToGet() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         ContainsFilter filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
                 "4"));
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -384,15 +399,16 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void containsUIDAndAttributesToGetAndPaging() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true,
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true,
                 null, 0, 20);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         ContainsFilter filter = (ContainsFilter) FilterBuilder.contains(AttributeBuilder.build(Uid.NAME,
                 "4"));
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -418,14 +434,15 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void startsWithUIDAndAttributesToGet() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         StartsWithFilter filter = (StartsWithFilter) FilterBuilder.startsWith(AttributeBuilder.build(Uid.NAME,
                 "4"));
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -451,14 +468,15 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void endsWithUIDAndAttributesToGet() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         EndsWithFilter filter = (EndsWithFilter) FilterBuilder.endsWith(AttributeBuilder.build(Uid.NAME,
                 "4"));
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -485,7 +503,8 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void notEndsWithUIDAndAttributesToGet() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -494,7 +513,7 @@ public class FilteringTest extends CommonTestClass {
 
         NotFilter notFilter = (NotFilter) FilterBuilder.not(filter);
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, notFilter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, notFilter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -521,7 +540,8 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void endsWithStartsWithOrUIDAndAttributesToGet() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -533,7 +553,7 @@ public class FilteringTest extends CommonTestClass {
 
         OrFilter orFilter = (OrFilter) FilterBuilder.or(ewfilter, swfilter);
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, orFilter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, orFilter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -546,17 +566,17 @@ public class FilteringTest extends CommonTestClass {
 
             String uid = result.getUid().getUidValue();
             int n = uid.length();
+            Boolean atStart = false;
+            Boolean atEnd = false;
 
             if (uid.charAt(n - 1) == '4') {
-            } else {
-                isOK = false;
+                atStart = true;
             }
 
             if (uid.charAt(0) == '3') {
-            } else {
-                isOK = false;
+                atEnd = true;
             }
-
+            isOK = atStart || atEnd;
         }
 
         Assert.assertTrue(isOK);
@@ -565,7 +585,8 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void endsWithStartsWithANDUIDAndAttributesToGet() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -577,7 +598,7 @@ public class FilteringTest extends CommonTestClass {
 
         AndFilter andFilter = (AndFilter) FilterBuilder.and(ewfilter, swfilter);
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, andFilter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, andFilter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
         boolean isOK = true;
@@ -609,14 +630,15 @@ public class FilteringTest extends CommonTestClass {
     @Test()
     public void containsAllValues() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         ContainsAllValuesFilter filter = (ContainsAllValuesFilter) FilterBuilder.containsAllValues(
                 AttributeBuilder.build(ATTR_MEMBERS, "98"));
 
-        grouperConnector.executeQuery(ObjectClass.GROUP, filter, handler, options);
+        grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
 
 

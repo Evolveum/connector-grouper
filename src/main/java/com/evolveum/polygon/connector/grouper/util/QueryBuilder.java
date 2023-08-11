@@ -185,7 +185,8 @@ public class QueryBuilder {
             if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
 
                 idAttr = SubjectProcessing.TABLE_SU_NAME + "." + SubjectProcessing.ATTR_UID;
-            } else if (objectClass.is(ObjectClass.GROUP_NAME)) {
+
+            } else if (objectClass.is(ObjectProcessing.GROUP_NAME)) {
 
                 idAttr = GroupProcessing.TABLE_GR_NAME + "." + GroupProcessing.ATTR_UID;
 

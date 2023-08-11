@@ -34,6 +34,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -54,6 +55,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConfiguration.setEnableIdBasedPaging(true);
         grouperConfiguration.setMaxPageSize(2);
 
@@ -78,6 +80,7 @@ public class FilteringTest extends CommonTestClass {
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, false, "87",
                 0, 20);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -99,6 +102,7 @@ public class FilteringTest extends CommonTestClass {
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, false, null,
                 0, 20);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -119,6 +123,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -139,6 +144,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME);
         ObjectClass objectClassSubject = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -165,6 +171,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME,
                 true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -190,8 +197,10 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME,
                 true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConfiguration.setEnableIdBasedPaging(true);
         grouperConfiguration.setMaxPageSize(2);
+
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -216,6 +225,7 @@ public class FilteringTest extends CommonTestClass {
     public void containsUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -249,8 +259,9 @@ public class FilteringTest extends CommonTestClass {
     public void containsUIDAndAttributesToGetMaxPaging() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
-        Integer maxPageSize = grouperConfiguration.getMaxPageSize();
-        Integer pageSize = null;
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
+        grouperConfiguration.setEnableIdBasedPaging(true);
+        grouperConfiguration.setMaxPageSize(2);
 
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
@@ -286,6 +297,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true,
                 null, 0, 20);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -320,6 +332,7 @@ public class FilteringTest extends CommonTestClass {
     public void startsWithUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -353,6 +366,7 @@ public class FilteringTest extends CommonTestClass {
     public void endsWithUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -387,6 +401,7 @@ public class FilteringTest extends CommonTestClass {
     public void notEndsWithUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -423,6 +438,7 @@ public class FilteringTest extends CommonTestClass {
     public void endsWithStartsWithOrUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -447,16 +463,18 @@ public class FilteringTest extends CommonTestClass {
 
             String uid = result.getUid().getUidValue();
             int n = uid.length();
+            Boolean atStart = false;
+            Boolean atEnd = false;
 
             if (uid.charAt(n - 1) == '7') {
-            } else {
-                isOK = false;
+                atStart = true;
             }
 
             if (uid.charAt(0) == '8') {
-            } else {
-                isOK = false;
+                atEnd = true;
             }
+
+            isOK = atStart || atEnd;
 
         }
 
@@ -467,6 +485,7 @@ public class FilteringTest extends CommonTestClass {
     public void endsWithStartsWithANDUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -511,7 +530,7 @@ public class FilteringTest extends CommonTestClass {
     public void andOrContainsUIDAndAttributesToGet() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
-
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -554,7 +573,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true, null,
                 0, 20);
-
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -597,7 +616,7 @@ public class FilteringTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true, "10",
                 0, 20);
-
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 
@@ -639,6 +658,7 @@ public class FilteringTest extends CommonTestClass {
     public void containsAllValues() {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSearchResultsHandler handler = getSearchResultHandler();
 

@@ -42,7 +42,7 @@ public class GroupProcessing extends ObjectProcessing {
 
     protected Set<String> multiValuedAttributesCatalogue = new HashSet();
     protected Map<String, Class> columns = new HashMap<>();
-    public static final ObjectClass O_CLASS = ObjectClass.GROUP;
+    public static final ObjectClass O_CLASS = new ObjectClass(GROUP_NAME);
 
     protected Map<String, Class> objectConstructionSchema = Map.ofEntries(
             Map.entry(ATTR_SCT_ID_IDX, Long.class),
@@ -71,11 +71,10 @@ public class GroupProcessing extends ObjectProcessing {
 
     @Override
     public void buildObjectClass(SchemaBuilder schemaBuilder, GrouperConfiguration configuration) {
-        LOG.info("Building object class definition for {0}", ObjectClass.GROUP_NAME);
+        LOG.info("Building object class definition for {0}", GroupProcessing.GROUP_NAME);
 
         ObjectClassInfoBuilder groupObjClassBuilder = new ObjectClassInfoBuilder();
-        groupObjClassBuilder.setType(ObjectClass.GROUP_NAME);
-
+        groupObjClassBuilder.setType("group");
         //Read-only,
 
         AttributeInfoBuilder name = new AttributeInfoBuilder(Name.NAME);
@@ -130,7 +129,7 @@ public class GroupProcessing extends ObjectProcessing {
             , Connection connection) {
 
         LOG.ok("Processing through executeQuery methods for the object class {0}",
-                ObjectClass.GROUP_NAME);
+                O_CLASS);
 
         QueryBuilder queryBuilder;
         Boolean isEqualsUid = false;
@@ -151,7 +150,6 @@ public class GroupProcessing extends ObjectProcessing {
 
         if (operationOptions != null && operationOptions.getPageSize() != null) {
 
-            LOG.ok("PS: {0}", operationOptions.getPageSize());
             isPagedSearch = configuration.getEnableIdBasedPaging();
         }
         LOG.ok("The exclude delete objects: {0}", configuration.getExcludeDeletedObjects());
@@ -629,7 +627,7 @@ public class GroupProcessing extends ObjectProcessing {
 
     @Override
     public Long getLatestSyncToken(Connection connection) {
-        LOG.ok("Processing through the 'getLatestSyncToken' method for the objectClass {0}", ObjectClass.GROUP);
+        LOG.ok("Processing through the 'getLatestSyncToken' method for the objectClass {0}", O_CLASS);
 
         Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
         Map<Map<String, String>, String> joinMap = new HashMap<>();

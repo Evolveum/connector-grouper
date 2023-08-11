@@ -26,7 +26,8 @@ import java.util.*;
 
 public abstract class ObjectProcessing {
     private static final Log LOG = Log.getLog(ObjectProcessing.class);
-    public static final String SUBJECT_NAME = "Subject";
+    public static final String SUBJECT_NAME = "subject";
+    public static final String GROUP_NAME = "group";
     protected static final String ATTR_MODIFIED = "last_modified";
     protected static final String TABLE_MEMBERSHIP_NAME = "gr_mp_memberships";
     protected static final String ATTR_GR_ID_IDX = "group_id_index";

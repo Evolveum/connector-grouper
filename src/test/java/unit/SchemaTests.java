@@ -15,6 +15,7 @@
  */
 package unit;
 
+import com.evolveum.polygon.connector.grouper.util.ObjectProcessing;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConfigurationException;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
@@ -49,8 +50,8 @@ public class SchemaTests extends CommonTestClass {
 
             LOG.ok("The object class info: {0}", oclass);
 
-            if (oclass.is(ObjectClass.GROUP_NAME)) {
 
+            if (oclass.is(ObjectProcessing.GROUP_NAME)) {
                 Iterator<AttributeInfo> ait = oclass.getAttributeInfo().iterator();
                 while (ait.hasNext()) {
                     AttributeInfo aif = ait.next();
@@ -69,8 +70,9 @@ public class SchemaTests extends CommonTestClass {
                     }
 
                 }
-            } else if (oclass.is(SUBJECT_NAME)) {
+//            } else if (oclass.is(SUBJECT_NAME)) {
 
+            } else  if (oclass.is(ObjectProcessing.SUBJECT_NAME)) {
                 Iterator<AttributeInfo> ait = oclass.getAttributeInfo().iterator();
 
                 while (ait.hasNext()) {

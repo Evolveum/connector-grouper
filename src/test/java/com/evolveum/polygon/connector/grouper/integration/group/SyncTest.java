@@ -16,6 +16,8 @@
 
 package com.evolveum.polygon.connector.grouper.integration.group;
 
+import com.evolveum.polygon.connector.grouper.util.GroupProcessing;
+import com.evolveum.polygon.connector.grouper.util.ObjectProcessing;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
@@ -32,8 +34,9 @@ public class SyncTest extends CommonTestClass {
     @Test()
     public void syncTest() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
-        ObjectClass objectClassGroup = new ObjectClass(ObjectClass.GROUP_NAME);
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        ObjectClass objectClassGroup = GroupProcessing.O_CLASS;
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
         TestSyncResultsHandler handler = getSyncResultHandler();
 
@@ -45,17 +48,22 @@ public class SyncTest extends CommonTestClass {
             LOG.info("### START ### Attribute set for the object {0}", result);
             LOG.info("### END ###");
         }
+
     }
 
     @Test()
     public void syncTestMaxPaging() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
-        ObjectClass objectClassGroup = new ObjectClass(ObjectClass.GROUP_NAME);
+
+        OperationOptions options = getDefaultOperationOptions(ObjectProcessing.GROUP_NAME, true);
+        ObjectClass objectClassGroup = GroupProcessing.O_CLASS;
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConfiguration.setEnableIdBasedPaging(true);
         grouperConfiguration.setMaxPageSize(2);
         grouperConnector.init(grouperConfiguration);
+
         TestSyncResultsHandler handler = getSyncResultHandler();
+
 
         grouperConnector.sync(objectClassGroup, new SyncToken(1684824672269L),
                 handler, options);
@@ -65,13 +73,13 @@ public class SyncTest extends CommonTestClass {
             LOG.info("### START ### Attribute set for the object {0}", result);
             LOG.info("### END ###");
         }
+
     }
 
     @Test()
     public void latestSyncTokenTest() {
 
-        OperationOptions options = getDefaultOperationOptions(ObjectClass.GROUP_NAME, true);
-        ObjectClass objectClassGroup = new ObjectClass(ObjectClass.GROUP_NAME);
+        ObjectClass objectClassGroup = GroupProcessing.O_CLASS;
         grouperConnector.init(grouperConfiguration);
 
         SyncToken token = grouperConnector.getLatestSyncToken(objectClassGroup);

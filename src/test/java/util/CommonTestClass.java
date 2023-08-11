@@ -18,6 +18,7 @@ package util;
 
 import com.evolveum.polygon.connector.grouper.GrouperConfiguration;
 import com.evolveum.polygon.connector.grouper.GrouperConnector;
+import com.evolveum.polygon.connector.grouper.util.ObjectProcessing;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.ObjectClass;
@@ -99,7 +100,7 @@ public class CommonTestClass implements ObjectConstants {
 
         Map<String, Object> operationOptions = new HashMap<>();
 
-        if (ObjectClass.GROUP_NAME.equals(objectClassName)) {
+        if (ObjectProcessing.GROUP_NAME.equals(objectClassName)) {
             if (extendedAttrsToGet) {
 
                 groupArray.add(ATTR_MEMBERS);
@@ -114,7 +115,7 @@ public class CommonTestClass implements ObjectConstants {
 
             operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, groupArray.toArray(new String[0]));
 
-        } else {
+        } else if (ObjectProcessing.SUBJECT_NAME.equals(objectClassName)) {
             if (extendedAttrsToGet) {
 
                 subjectArray.add(ATTR_MEMBER_OF);
@@ -127,6 +128,26 @@ public class CommonTestClass implements ObjectConstants {
 
             operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, subjectArray.toArray(new String[0]));
 
+        } else {
+
+            if (extendedAttrsToGet) {
+
+                subjectArray.add(ATTR_MEMBER_OF);
+                groupArray.add(ATTR_MEMBERS);
+
+                if (grouperConfiguration.getExtendedSubjectProperties() != null) {
+
+                    subjectArray.addAll(Arrays.asList(grouperConfiguration.getExtendedSubjectProperties()));
+                }
+
+                if (grouperConfiguration.getExtendedGroupProperties() != null) {
+
+                    groupArray.addAll(Arrays.asList(grouperConfiguration.getExtendedGroupProperties()));
+                }
+            }
+            subjectArray.addAll(groupArray);
+
+            operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, subjectArray.toArray(new String[0]));
         }
 
         if (pageOffset != null) {
@@ -150,13 +171,13 @@ public class CommonTestClass implements ObjectConstants {
     }
 
     @BeforeMethod
-    private void init() {
+    protected void init() {
         grouperConnector = new GrouperConnector();
         initializeAndFetchGrouperConfiguration();
     }
 
     @AfterMethod
-    private void cleanup() {
+    protected void cleanup() {
         grouperConnector.dispose();
         grouperConfiguration.release();
     }

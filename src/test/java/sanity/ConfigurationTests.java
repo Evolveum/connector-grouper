@@ -26,6 +26,7 @@ import util.CommonTestClass;
 import java.util.Arrays;
 
 import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.fail;
 
 public class ConfigurationTests extends CommonTestClass {
     private static final Log LOG = Log.getLog(ConfigurationTests.class);
@@ -35,6 +36,16 @@ public class ConfigurationTests extends CommonTestClass {
 
         grouperConfiguration.setHost(null);
         grouperConfiguration.setPort(null);
+        grouperConfiguration.validate();
+
+        Assert.fail();
+    }
+
+    @Test(expectedExceptions = ConfigurationException.class)
+    public void initializeNotCorrectConfigurationCombination() {
+
+        grouperConfiguration.setEnableIdBasedPaging(false);
+        grouperConfiguration.setMaxPageSize(2);
         grouperConfiguration.validate();
 
         Assert.fail();

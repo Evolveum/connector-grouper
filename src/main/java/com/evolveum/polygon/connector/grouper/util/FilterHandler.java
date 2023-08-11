@@ -315,7 +315,8 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
             LOG.ok("Property name equals UID value");
             ObjectClass oc = r.getObjectClass();
 
-            if (oc.is(ObjectClass.GROUP_NAME)) {
+
+            if (oc.is(ObjectProcessing.GROUP_NAME)) {
 
                 return GroupProcessing.ATTR_UID;
             } else {
@@ -331,7 +332,8 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
             ObjectClass oc = r.getObjectClass();
 
-            if (oc.is(ObjectClass.GROUP_NAME)) {
+
+            if (oc.is(ObjectProcessing.GROUP_NAME)) {
 
                 return GroupProcessing.ATTR_NAME;
             } else {
@@ -344,7 +346,9 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
         if (GroupProcessing.ATTR_MEMBERS.equals(name) || SubjectProcessing.ATTR_MEMBER_OF.equals(name)) {
 
             ObjectClass oc = r.getObjectClass();
-            if (oc.is(ObjectClass.GROUP_NAME)) {
+
+
+            if (oc.is(ObjectProcessing.GROUP_NAME)) {
 
                 return GroupProcessing.ATTR_MEMBERS_NATIVE;
             } else {

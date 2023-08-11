@@ -43,6 +43,7 @@ public class SyncTest extends CommonTestClass {
             LOG.info("### START ### Attribute set for the object {0}", result);
             LOG.info("### END ###");
         }
+
     }
 
     @Test()
@@ -50,6 +51,7 @@ public class SyncTest extends CommonTestClass {
 
         OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
         ObjectClass objectClassGroup = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConfiguration.setEnableIdBasedPaging(true);
         grouperConfiguration.setMaxPageSize(2);
         grouperConnector.init(grouperConfiguration);
@@ -63,13 +65,13 @@ public class SyncTest extends CommonTestClass {
             LOG.info("### START ### Attribute set for the object {0}", result);
             LOG.info("### END ###");
         }
+
     }
     @Test()
     public void latestSyncTokenTest() {
 
-
-        OperationOptions options = getDefaultOperationOptions(SUBJECT_NAME, true);
         ObjectClass objectClassGroup = new ObjectClass(SUBJECT_NAME);
+        grouperConfiguration = initializeAndFetchGrouperConfiguration();
         grouperConnector.init(grouperConfiguration);
 
 

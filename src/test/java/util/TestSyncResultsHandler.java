@@ -22,13 +22,17 @@ import org.identityconnectors.framework.common.objects.*;
 import java.util.ArrayList;
 
 public class TestSyncResultsHandler implements SyncResultsHandler {
-    private static final ArrayList<SyncDelta> uidResult = new ArrayList<>();
+    private ArrayList<SyncDelta> uidResult = new ArrayList<>();
     private static final Log LOG = Log.getLog(TestSyncResultsHandler.class);
+
+    public TestSyncResultsHandler() {
+        uidResult.clear();
+    }
 
     @Override
     public boolean handle(SyncDelta syncDelta) {
 
-            if (syncDelta != null) {
+        if (syncDelta != null) {
             return uidResult.add(syncDelta);
         }
 
@@ -39,4 +43,11 @@ public class TestSyncResultsHandler implements SyncResultsHandler {
 
         return uidResult;
     }
+
+//    public boolean clear() {
+//
+//        uidResult.clear();
+//
+//        return uidResult.isEmpty();
+//    }
 }

@@ -44,7 +44,8 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     @Override
     public void validate() {
         LOG.info("Execution of validate configuration method.");
-        String messagePart = "One or more mandatory parameters are not set: ";
+        String messagePart = "One or more mandatory parameters or a combination of parameters," +
+                " are not set or set not correct: ";
         HashSet<String> parameters = new HashSet<>();
 
 
@@ -85,6 +86,11 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
                     "marked as 'deleted=T' will be omitted from the result set.");
         }
 
+        if (maxPageSize != null && !enableIdBasedPaging) {
+
+            parameters.add("maxPageSize");
+            parameters.add("enableIdBasedPaging");
+        }
 
         if (!parameters.isEmpty()) {
 
@@ -234,6 +240,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         extendedSubjectProperties = null;
         extendedGroupProperties = null;
         excludeDeletedObjects = true;
+        enableIdBasedPaging = false;
         maxPageSize = null;
     }
 }
