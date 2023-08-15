@@ -86,6 +86,7 @@
                 <fetchStrategy>explicit</fetchStrategy>
             </attribute>
             <association>
+                <strength>strong</strength>
                 <ref>ri:group</ref>
                 <inbound>
                     <expression>
@@ -118,10 +119,29 @@
                                     </expression>
                                 </q:equal>
                             </filter>
+                            <populate>
+                                <populateItem>
+                                    <expression>
+                                        <value>grouper-group</value>
+                                    </expression>
+                                    <target>
+                                        <path>subtype</path>
+                                    </target>
+                                </populateItem>
+                            </populate>
                         </assignmentTargetSearch>
                     </expression>
                     <target>
                         <path>assignment</path>
+                        <set>
+                            <condition>
+                                <script>
+                                    <code>
+                                        assignment?.subtype?.contains('grouper-group')
+                                    </code>
+                                </script>
+                            </condition>
+                        </set>
                     </target>
                 </inbound>
                 <kind>entitlement</kind>
