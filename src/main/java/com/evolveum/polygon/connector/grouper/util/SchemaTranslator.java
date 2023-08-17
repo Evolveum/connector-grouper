@@ -23,6 +23,7 @@ import org.identityconnectors.framework.common.objects.OperationOptionInfoBuilde
 import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.SchemaBuilder;
 import org.identityconnectors.framework.spi.operations.SearchOp;
+import org.identityconnectors.framework.spi.operations.SyncOp;
 
 public class SchemaTranslator {
     private static final Log LOG = Log.getLog(SchemaTranslator.class);
@@ -37,8 +38,13 @@ public class SchemaTranslator {
         groupProcessing.buildObjectClass(schemaBuilder, configuration);
         userProcessing.buildObjectClass(schemaBuilder, configuration);
 
-        schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class);
-        schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes(), SearchOp.class);
+//        schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet(), SearchOp.class
+//                , SyncOp.class);
+//        schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes(), SearchOp.class
+//                , SyncOp.class);
+
+        schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildAttributesToGet());
+        schemaBuilder.defineOperationOption(OperationOptionInfoBuilder.buildReturnDefaultAttributes());
 
         if (configuration.getEnableIdBasedPaging()) {
 
