@@ -37,6 +37,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private String host;
     private String[] extendedGroupProperties = {};
     private String[] extendedSubjectProperties = {};
+    private String[] attrsToHaveInAllSearch = {};
     private Boolean excludeDeletedObjects = true;
     private Boolean enableIdBasedPaging = false;
     private Integer maxPageSize;
@@ -227,6 +228,16 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.maxPageSize = maxPageSize;
     }
 
+    @ConfigurationProperty(order = 13, displayMessageKey = "attrsToHaveInAllSearch.display",
+            helpMessageKey = "attrsToHaveInAllSearch.help")
+
+    public String[] getAttrsToHaveInAllSearch() {
+        return attrsToHaveInAllSearch;
+    }
+
+    public void setAttrsToHaveInAllSearch(String[] attrsToHaveInAllSearch) {
+        this.attrsToHaveInAllSearch = attrsToHaveInAllSearch;
+    }
 
     @Override
     public void release() {

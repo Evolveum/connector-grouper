@@ -44,6 +44,8 @@ public class PropertiesParser {
     private static final String _ENABLE_ID_BASED_PAGING = "enableIdBasedPaging";
     private static final String _EXCLUDE_DELETED = "excludeDeletedObjects";
     private static final String _MAX_PAGE_SIZE = "maxPageSize";
+    private static final String _ATTRS_ALL_SEARCH = "attrsToHaveInAllSearch";
+
 
     public PropertiesParser() {
 
@@ -127,6 +129,10 @@ public class PropertiesParser {
         }
 
         return Integer.parseInt(maxSize);
+    }
+
+    public Set<String> getAttrsAllSearch() {
+        return getValues(_ATTRS_ALL_SEARCH);
     }
 
 }

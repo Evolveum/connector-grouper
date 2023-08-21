@@ -378,7 +378,14 @@ public abstract class ObjectProcessing {
     }
 
     public abstract LinkedHashMap<String, GrouperObject> sync(SyncToken syncToken, OperationOptions operationOptions,
-                                                              Connection connection, QueryBuilder query);
+                                                              Connection connection, QueryBuilder query,
+                                                              boolean isAllObjectClass);
+
+    public LinkedHashMap<String, GrouperObject> sync(SyncToken syncToken, OperationOptions operationOptions,
+                                                     Connection connection, QueryBuilder query) {
+
+        return sync(syncToken, operationOptions, connection, query, false);
+    }
 
     protected abstract void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler,
                                  OperationOptions operationOptions, Connection connection);

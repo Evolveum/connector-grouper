@@ -224,7 +224,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
     private String processStringFilter(Attribute attr, String operator, ResourceQuery r, Filter filter) {
 
         StringBuilder query = new StringBuilder();
-
+        LOG.ok("String filter is processing attribute {0}, with the value {1}", attr.getName(), attr.getValue());
         if (attr != null) {
             String singleValue = null;
             String name = attr.getName();
@@ -240,6 +240,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
             }
 
             name = evaluateNonNativeAttributeNames(r, name);
+            LOG.ok("Using the following attribute name after evaluation: {0}", name);
 
             Map<String, Map<String, Class>> tableAndcolumns = r.getColumnInformation();
             String wrappedValue = null;
@@ -310,6 +311,8 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
 
     private String evaluateNonNativeAttributeNames(ResourceQuery r, String name) {
 
+        LOG.ok("Non native attribute name evaluation for: {0}", name);
+
         if (Uid.NAME.equals(name)) {
 
             LOG.ok("Property name equals UID value");
@@ -356,6 +359,7 @@ public class FilterHandler implements FilterVisitor<ResourceQuery, ResourceQuery
                 return SubjectProcessing.ATTR_MEMBER_OF_NATIVE;
             }
         }
+
 
         return name;
     }

@@ -205,7 +205,7 @@ public class QueryBuilder {
                                 translatedFilter.getCurrentQuerySnippet() + ")";
                     }
 
-                    orderByASC = Set.of(idAttr);
+                    orderByASC = orderByASC != null && !orderByASC.isEmpty() ? orderByASC : Set.of(idAttr);
                     limit = pageSize;
 
                 } else if ((pageCookie == null || (pageCookie != null && pageCookie.isEmpty()))
@@ -214,7 +214,8 @@ public class QueryBuilder {
                     limit = pageSize;
                     offset = pageOffset;
 
-                    orderByASC = Set.of(idAttr);
+
+                    orderByASC = orderByASC != null && !orderByASC.isEmpty() ? orderByASC : Set.of(idAttr);
 
                     if (translatedFilter != null) {
 

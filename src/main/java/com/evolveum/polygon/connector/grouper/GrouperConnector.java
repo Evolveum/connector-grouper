@@ -325,9 +325,9 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
 
             QueryBuilder subjectQuery = subjectProcessing.syncQuery(syncToken, operationOptions,
-                    grouperConnection.getConnection());
+                    grouperConnection.getConnection(), true);
             QueryBuilder groupQuery = groupProcessing.syncQuery(syncToken, operationOptions,
-                    grouperConnection.getConnection());
+                    grouperConnection.getConnection(), true);
 
             Integer subjectCount = subjectQuery.getTotalCount();
             Integer groupCount = groupQuery.getTotalCount();
@@ -340,7 +340,8 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
                         subjectQuery.setPageOffset(i + 1);
 
                         subjectObjectLinkedHashMap.putAll(subjectProcessing.
-                                sync(syncToken, operationOptions, grouperConnection.getConnection(), subjectQuery));
+                                sync(syncToken, operationOptions, grouperConnection.getConnection(), subjectQuery,
+                                        true));
 
                     }
                 }
@@ -353,18 +354,20 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
                         groupQuery.setPageOffset(i + 1);
 
                         groupObjectLinkedHashMap.putAll(groupProcessing.
-                                sync(syncToken, operationOptions, grouperConnection.getConnection(), groupQuery));
-
+                                sync(syncToken, operationOptions, grouperConnection.getConnection(), groupQuery,
+                                        true));
                     }
                 }
 
             } else {
 
                 subjectObjectLinkedHashMap = subjectProcessing.
-                        sync(syncToken, operationOptions, grouperConnection.getConnection(), subjectQuery);
+                        sync(syncToken, operationOptions, grouperConnection.getConnection(), subjectQuery,
+                                true);
 
                 groupObjectLinkedHashMap = groupProcessing.
-                        sync(syncToken, operationOptions, grouperConnection.getConnection(), groupQuery);
+                        sync(syncToken, operationOptions, grouperConnection.getConnection(), groupQuery,
+                                true);
             }
 
 
@@ -452,7 +455,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
                 GrouperObject go = mergedMap.get(id);
 
-                    if (go.getObjectClass().is(ObjectProcessing.GROUP_NAME)) {
+                if (go.getObjectClass().is(ObjectProcessing.GROUP_NAME)) {
 
                     if (!groupProcessing.sync(syncResultsHandler, GroupProcessing.O_CLASS, go)) {
 

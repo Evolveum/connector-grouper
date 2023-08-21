@@ -16,6 +16,7 @@
 
 package util;
 
+import com.evolveum.polygon.connector.grouper.util.ObjectProcessing;
 import org.identityconnectors.framework.common.objects.ObjectClassUtil;
 
 public interface ObjectConstants {
@@ -31,7 +32,7 @@ public interface ObjectConstants {
     String ATTR_MEMBER_OF = "member_of";
     // COMMON
     //String SUBJECT_NAME = ObjectClassUtil.createSpecialName("subject");
-    String SUBJECT_NAME = "Subject";
+    String SUBJECT_NAME = ObjectProcessing.SUBJECT_NAME;
     String ATTR_ID_IDX = "id_index";
     String ATTR_MODIFIED = "last_modified";
     String ATTR_DELETED = "deleted";

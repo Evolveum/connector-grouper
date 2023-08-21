@@ -64,6 +64,10 @@ public class CommonTestClass implements ObjectConstants {
             grouperConfiguration.setExtendedSubjectProperties(parser.getSubjectProperties().toArray(new String[0]));
         }
 
+        if (parser.getAttrsAllSearch() != null) {
+            grouperConfiguration.setAttrsToHaveInAllSearch(parser.getAttrsAllSearch().toArray(new String[0]));
+        }
+
         grouperConfiguration.validate();
         return grouperConfiguration;
     }
@@ -127,28 +131,28 @@ public class CommonTestClass implements ObjectConstants {
             }
 
             operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, subjectArray.toArray(new String[0]));
-
-        } else {
-
-            if (extendedAttrsToGet) {
-
-                subjectArray.add(ATTR_MEMBER_OF);
-                groupArray.add(ATTR_MEMBERS);
-
-                if (grouperConfiguration.getExtendedSubjectProperties() != null) {
-
-                    subjectArray.addAll(Arrays.asList(grouperConfiguration.getExtendedSubjectProperties()));
-                }
-
-                if (grouperConfiguration.getExtendedGroupProperties() != null) {
-
-                    groupArray.addAll(Arrays.asList(grouperConfiguration.getExtendedGroupProperties()));
-                }
-            }
-            subjectArray.addAll(groupArray);
-
-            operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, subjectArray.toArray(new String[0]));
         }
+//        } else {
+//
+//            if (extendedAttrsToGet) {
+//
+//                subjectArray.add(ATTR_MEMBER_OF);
+//                groupArray.add(ATTR_MEMBERS);
+//
+//                if (grouperConfiguration.getExtendedSubjectProperties() != null) {
+//
+//                    subjectArray.addAll(Arrays.asList(grouperConfiguration.getExtendedSubjectProperties()));
+//                }
+//
+//                if (grouperConfiguration.getExtendedGroupProperties() != null) {
+//
+//                    groupArray.addAll(Arrays.asList(grouperConfiguration.getExtendedGroupProperties()));
+//                }
+//            }
+//            subjectArray.addAll(groupArray);
+//
+//            operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, subjectArray.toArray(new String[0]));
+//        }
 
         if (pageOffset != null) {
 

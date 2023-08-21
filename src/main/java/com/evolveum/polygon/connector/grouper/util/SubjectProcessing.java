@@ -362,7 +362,7 @@ public class SubjectProcessing extends ObjectProcessing {
     public void sync(SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions,
                      Connection connection) {
 
-        QueryBuilder syncQueryBuilder = syncQuery(syncToken, operationOptions, connection);
+        QueryBuilder syncQueryBuilder = syncQuery(syncToken, operationOptions, connection, false);
         Integer totalCount = syncQueryBuilder.getTotalCount();
 
         SyncDeltaBuilder builder = new SyncDeltaBuilder();
@@ -411,7 +411,8 @@ public class SubjectProcessing extends ObjectProcessing {
 
     @Override
     public LinkedHashMap<String, GrouperObject> sync(SyncToken syncToken, OperationOptions operationOptions,
-                                                     Connection connection, QueryBuilder queryBuilder) {
+                                                     Connection connection, QueryBuilder queryBuilder,
+                                                     boolean isAllObjectClass) {
 
         LinkedHashMap<String, GrouperObject> objects = new LinkedHashMap<>();
 
@@ -479,7 +480,8 @@ public class SubjectProcessing extends ObjectProcessing {
                 }
 
                 if (!notDeletedObjects.isEmpty()) {
-                    notDeletedObjects = fetchFullObjects(notDeletedObjects, operationOptions, connection);
+                    notDeletedObjects = fetchFullObjects(notDeletedObjects, operationOptions, connection,
+                            isAllObjectClass);
                 }
 
                 for (String id : objects.keySet()) {
@@ -572,11 +574,19 @@ public class SubjectProcessing extends ObjectProcessing {
         throw new ConnectorException("Latest sync token could not be fetched.");
     }
 
+    private Map<String, GrouperObject> fetchFullObjects(Map<String, GrouperObject> objectsMap,
+                                                        OperationOptions operationOptions,
+                                                        Connection connection) {
+
+        return fetchFullObjects(objectsMap, operationOptions, connection, false);
+    }
+
     private Map<String, GrouperObject> fetchFullObjects(Map<String, GrouperObject> notDeletedObject,
-                                                        OperationOptions operationOptions, Connection connection) {
+                                                        OperationOptions operationOptions, Connection connection,
+                                                        boolean isAllObjectClass) {
 
         QueryBuilder queryBuilder;
-
+        String[] attrsToHaveInAllSearch = configuration.getAttrsToHaveInAllSearch();
         Set<String> idSet = new LinkedHashSet<>();
         for (String identifier : notDeletedObject.keySet()) {
 
@@ -586,17 +596,34 @@ public class SubjectProcessing extends ObjectProcessing {
         List<String> extended = configuration.getExtendedSubjectProperties() != null ?
                 Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
 
-        if (getAttributesToGet(operationOptions) != null &&
-                !getAttributesToGet(operationOptions).isEmpty()) {
+        Set<String> attrsToGet = null;
 
+        if ((getAttributesToGet(operationOptions) != null &&
+                !getAttributesToGet(operationOptions).isEmpty())) {
+
+            attrsToGet = getAttributesToGet(operationOptions);
+        }
+
+        if (isAllObjectClass) {
+            if ((attrsToHaveInAllSearch != null &&
+                    attrsToHaveInAllSearch.length != 0)) {
+
+                if (attrsToGet != null) {
+
+                    attrsToGet.addAll(Set.of(attrsToHaveInAllSearch));
+                } else {
+                    attrsToGet = Set.of(attrsToHaveInAllSearch);
+                }
+            }
+        }
+
+        if (attrsToGet != null &&
+                !attrsToGet.isEmpty()) {
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
             Map<Map<String, String>, String> joinMap = new HashMap<>();
 
             tablesAndColumns.put(TABLE_SU_NAME, columns);
-
-            Set<String> attrsToGet = getAttributesToGet(operationOptions);
-
 
             if (attrsToGet.contains(ATTR_MEMBER_OF)) {
 
@@ -716,13 +743,15 @@ public class SubjectProcessing extends ObjectProcessing {
         return extensionAttributeNames;
     }
 
-    public QueryBuilder syncQuery(SyncToken syncToken, OperationOptions operationOptions, Connection connection) {
+    public QueryBuilder syncQuery(SyncToken syncToken, OperationOptions operationOptions, Connection connection,
+                                  boolean isAllObjectClass) {
         QueryBuilder queryBuilder;
 
         String tokenVal;
 
         Integer maxPageSize = configuration.getMaxPageSize();
         Integer pageSize = null;
+        String[] attrsToHaveInAllSearch = configuration.getAttrsToHaveInAllSearch();
 
         if (operationOptions.getOptions().containsKey(OperationOptions.OP_PAGE_SIZE)) {
 
@@ -753,17 +782,36 @@ public class SubjectProcessing extends ObjectProcessing {
         List<String> extended = configuration.getExtendedSubjectProperties() != null ?
                 Arrays.asList(configuration.getExtendedSubjectProperties()) : null;
 
-        if (getAttributesToGet(operationOptions) != null &&
-                !getAttributesToGet(operationOptions).isEmpty()) {
+
+        Set<String> attrsToGet = null;
+
+        if ((getAttributesToGet(operationOptions) != null &&
+                !getAttributesToGet(operationOptions).isEmpty())) {
+
+            attrsToGet = getAttributesToGet(operationOptions);
+        }
+
+        if (isAllObjectClass) {
+            if ((attrsToHaveInAllSearch != null &&
+                    attrsToHaveInAllSearch.length != 0)) {
+
+                if (attrsToGet != null) {
+
+                    attrsToGet.addAll(Set.of(attrsToHaveInAllSearch));
+                } else {
+                    attrsToGet = Set.of(attrsToHaveInAllSearch);
+                }
+            }
+        }
+
+        if (attrsToGet != null &&
+                !attrsToGet.isEmpty()) {
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
             Map<Map<String, String>, String> joinMap = new HashMap<>();
 
             tablesAndColumns.put(TABLE_SU_NAME, Map.of(ATTR_DELETED, String.class,
                     ATTR_ID_IDX, Long.class, ATTR_MODIFIED, Long.class));
-
-            Set<String> attrsToGet = getAttributesToGet(operationOptions);
-
 
             if (attrsToGet.contains(ATTR_MEMBER_OF)) {
 
