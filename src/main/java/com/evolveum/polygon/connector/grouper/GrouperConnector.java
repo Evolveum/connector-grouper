@@ -213,7 +213,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         } else {
 
             // Default for connectionValidTimeout
-            suggestions.put("timeout", SuggestedValuesBuilder.buildOpen("10"));
+            suggestions.put("connectionValidTimeout", SuggestedValuesBuilder.buildOpen("10"));
         }
 
         if (excludeDeletedObjects != null) {
@@ -304,6 +304,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             LOG.ok("Empty token, fetching latest sync token");
             syncToken = getLatestSyncToken(objectClass);
+
         }
 
 
@@ -490,14 +491,29 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         if (objectClass.is(ObjectProcessing.GROUP_NAME)) {
 
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
+            Long groupToken = groupProcessing.getLatestSyncToken(grouperConnection.getConnection());
 
-            return new SyncToken(groupProcessing.getLatestSyncToken(grouperConnection.getConnection()));
+            if (groupToken != null) {
+
+                return new SyncToken(groupToken);
+            } else {
+
+                return null;
+            }
 
         } else if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
 
             SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
+            Long subjectToken = subjectProcessing.getLatestSyncToken(grouperConnection.getConnection());
 
-            return new SyncToken(subjectProcessing.getLatestSyncToken(grouperConnection.getConnection()));
+            if (subjectToken != null) {
+
+                return new SyncToken(subjectToken);
+            } else {
+
+                return null;
+            }
+
         } else if (objectClass.is(ObjectClass.ALL_NAME)) {
 
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
@@ -507,12 +523,23 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
 
             Long groupToken = groupProcessing.getLatestSyncToken(grouperConnection.getConnection());
 
-            if (subjectToken.compareTo(groupToken) <= 0) {
+            if (subjectToken != null) {
+
+                if (groupToken != null && subjectToken.compareTo(groupToken) <= 0) {
+
+                    return new SyncToken(groupToken);
+                } else {
+
+                    return new SyncToken(subjectToken);
+                }
+
+
+            } else if (groupToken != null) {
 
                 return new SyncToken(groupToken);
             } else {
 
-                return new SyncToken(subjectToken);
+                return null;
             }
 
         } else {

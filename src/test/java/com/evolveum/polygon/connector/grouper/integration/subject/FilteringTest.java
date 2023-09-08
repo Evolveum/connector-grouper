@@ -17,8 +17,8 @@
 package com.evolveum.polygon.connector.grouper.integration.subject;
 
 import org.identityconnectors.framework.common.objects.filter.*;
-import util.CommonTestClass;
-import util.TestSearchResultsHandler;
+import com.evolveum.polygon.connector.grouper.util.CommonTestClass;
+import com.evolveum.polygon.connector.grouper.util.TestSearchResultsHandler;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
 import org.testng.Assert;

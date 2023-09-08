@@ -16,7 +16,7 @@
 
 package com.evolveum.polygon.connector.grouper.integration.group;
 
-import util.CommonTestClass;
+import com.evolveum.polygon.connector.grouper.util.CommonTestClass;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.SuggestedValues;
 import org.testng.Assert;

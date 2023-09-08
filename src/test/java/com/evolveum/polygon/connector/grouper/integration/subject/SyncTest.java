@@ -20,8 +20,8 @@ import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.objects.*;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-import util.CommonTestClass;
-import util.TestSyncResultsHandler;
+import com.evolveum.polygon.connector.grouper.util.CommonTestClass;
+import com.evolveum.polygon.connector.grouper.util.TestSyncResultsHandler;
 
 public class SyncTest extends CommonTestClass {
     private static final Log LOG = Log.getLog(SyncTest.class);
