@@ -188,6 +188,12 @@
                         <synchronize/>
                     </actions>
                 </reaction>
+                <reaction>
+                    <situation>deleted</situation>
+                    <actions>
+                        <synchronize/>
+                    </actions>
+                </reaction>
             </synchronization>
 
         </objectType>
