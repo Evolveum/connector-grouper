@@ -188,6 +188,12 @@
                         <synchronize/>
                     </actions>
                 </reaction>
+                <reaction>
+                    <situation>deleted</situation>
+                    <actions>
+                        <synchronize/>
+                    </actions>
+                </reaction>
             </synchronization>
 
         </objectType>
@@ -233,61 +239,6 @@
                 <ref>ri:members</ref>
                 <fetchStrategy>explicit</fetchStrategy>
             </attribute>
-
-            <association>
-                <ref>ri:subjects</ref>
-                <inbound>
-                    <expression>
-                        <assignmentTargetSearch>
-                            <targetType>c:RoleType</targetType>
-                            <filter>
-                                <q:equal>
-                                    <q:path>name</q:path>
-                                    <expression>
-                                        <script>
-                                            <code>
-
-                                                def groupName;
-                                                if (entitlement!=null){
-                                                def attrs = entitlement.getAttributes();
-                                                pcvi = attrs.asPrismContainerValue().getItems();
-
-
-                                                for (obj in pcvi){
-                                                if (obj.isSingleValue()){
-
-                                                if("uid".equals(obj?.getElementName().toString())){
-
-                                                groupName = obj?.getValue()?.getRealValue()
-
-                                                return groupName
-                                                }
-                                                }
-                                                }
-
-                                                }
-
-                                                return groupName;
-                                            </code>
-                                        </script>
-                                    </expression>
-                                </q:equal>
-                            </filter>
-                        </assignmentTargetSearch>
-                    </expression>
-                    <target>
-                        <path>assignment</path>
-                    </target>
-                </inbound>
-                <kind>account</kind>
-                <intent>default</intent>
-                <direction>subjectToObject</direction>
-                <associationAttribute>ri:members</associationAttribute>
-                <valueAttribute>icfs:uid</valueAttribute>
-                <shortcutAssociationAttribute>ri:member_of</shortcutAssociationAttribute>
-                <shortcutValueAttribute>icfs:uid</shortcutValueAttribute>
-                <explicitReferentialIntegrity>false</explicitReferentialIntegrity>
-            </association>
 
             <correlation>
                 <correlators>
