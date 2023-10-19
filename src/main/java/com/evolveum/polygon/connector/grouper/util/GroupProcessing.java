@@ -160,10 +160,21 @@ public class GroupProcessing extends ObjectProcessing {
                 LOG.ok("Augmenting filter {0}, " +
                         "with DELETED=F argument based on the exclude delete objects property value", filter);
 
+
+                if (filter instanceof ContainsAllValuesFilter){
+
+                    EqualsFilter equalsMembFilter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(
+                            TABLE_MEMBERSHIP_NAME + "." + ATTR_DELETED, "F"));
+
+                    filter = FilterBuilder.and(equalsMembFilter, filter);
+                }
+
                 EqualsFilter equalsFilter = (EqualsFilter) FilterBuilder.equalTo(AttributeBuilder.build(
                         TABLE_GR_NAME + "." + ATTR_DELETED, "F"));
 
                 filter = FilterBuilder.and(equalsFilter, filter);
+
+
             } else {
                 LOG.ok("Augmenting empty filter with DELETED=F argument based on the exclude delete objects property " +
                         "value");
@@ -174,7 +185,7 @@ public class GroupProcessing extends ObjectProcessing {
         }
 
         if (getAttributesToGet(operationOptions) != null &&
-                (!getAttributesToGet(operationOptions).isEmpty() && !isAllQuery
+                (!getAttributesToGet(operationOptions).isEmpty() //&& !isAllQuery // TODO issues in reconciliation
                         && !isPagedSearch)) {
 
             Map<String, Map<String, Class>> tablesAndColumns = new HashMap<>();
@@ -293,7 +304,8 @@ public class GroupProcessing extends ObjectProcessing {
                 LOG.ok("Empty object set execute query.");
             } else {
 
-                if (!isAllQuery && isPagedSearch) {
+                if (  isPagedSearch //&& !isAllQuery TODO issues in reconciliation
+                ) {
                     objects = fetchFullObjects(objects, operationOptions, connection);
                 }
 

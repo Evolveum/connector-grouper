@@ -636,7 +636,7 @@ public class FilteringTest extends CommonTestClass {
         TestSearchResultsHandler handler = getSearchResultHandler();
 
         ContainsAllValuesFilter filter = (ContainsAllValuesFilter) FilterBuilder.containsAllValues(
-                AttributeBuilder.build(ATTR_MEMBERS, "98"));
+                AttributeBuilder.build(ATTR_MEMBERS, "87"));
 
         grouperConnector.executeQuery(GroupProcessing.O_CLASS, filter, handler, options);
         ArrayList<ConnectorObject> results = handler.getResult();
