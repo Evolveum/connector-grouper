@@ -33,8 +33,8 @@ public class GroupProcessing extends ObjectProcessing {
     private static final String ATTR_DISPLAY_NAME = "display_name";
     private static final String ATTR_DESCRIPTION = "description";
     private static final String ATTR_ID_IDX = "id_index";
-    protected static final String TABLE_GR_NAME = "gr_mp_groups";
-    private static final String TABLE_GR_EXTENSION_NAME = "gr_mp_group_attributes";
+    protected static final String NO_PREFIX_TABLE_GR_NAME = "_mp_groups";
+    private static final String NO_PREFIX_TABLE_GR_EXTENSION_NAME = "_mp_group_attributes";
     protected static final String ATTR_UID = ATTR_ID_IDX;
     protected static final String ATTR_NAME = "group_name";
     protected static final String ATTR_MEMBERS = "members";
@@ -42,6 +42,8 @@ public class GroupProcessing extends ObjectProcessing {
 
     protected Set<String> multiValuedAttributesCatalogue = new HashSet();
     protected Map<String, Class> columns = new HashMap<>();
+    protected static String TABLE_GR_NAME = null;
+    protected static String TABLE_GR_EXTENSION_NAME = null;
     public static final ObjectClass O_CLASS = new ObjectClass(GROUP_NAME);
 
     protected Map<String, Class> objectConstructionSchema = Map.ofEntries(
@@ -58,6 +60,9 @@ public class GroupProcessing extends ObjectProcessing {
     public GroupProcessing(GrouperConfiguration configuration) {
 
         super(configuration);
+
+        TABLE_GR_NAME = configuration.getTablePrefix() + NO_PREFIX_TABLE_GR_NAME;
+        TABLE_GR_EXTENSION_NAME = configuration.getTablePrefix() + NO_PREFIX_TABLE_GR_EXTENSION_NAME;
 
         columns.put(ATTR_NAME, String.class);
         columns.put(ATTR_DISPLAY_NAME, String.class);

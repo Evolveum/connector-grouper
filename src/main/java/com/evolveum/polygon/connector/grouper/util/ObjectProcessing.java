@@ -29,7 +29,7 @@ public abstract class ObjectProcessing {
     public static final String SUBJECT_NAME = "subject";
     public static final String GROUP_NAME = "group";
     protected static final String ATTR_MODIFIED = "last_modified";
-    protected static final String TABLE_MEMBERSHIP_NAME = "gr_mp_memberships";
+    protected static final String NO_PREFIX_TABLE_MEMBERSHIP_NAME = "_mp_memberships";
     protected static final String ATTR_GR_ID_IDX = "group_id_index";
     protected static final String ATTR_SCT_ID_IDX = "subject_id_index";
     protected static final String ATTR_EXT_NAME = "attribute_name";
@@ -38,6 +38,7 @@ public abstract class ObjectProcessing {
     protected static final String ATTR_DELETED_TRUE = "T";
     protected static final String ATTR_MODIFIED_LATEST = "latest_timestamp";
     private static final String _COUNT = "count";
+    protected static String TABLE_MEMBERSHIP_NAME = null;
     protected GrouperConfiguration configuration;
 
     protected Map<String, Class> objectColumns = Map.ofEntries(
@@ -63,6 +64,8 @@ public abstract class ObjectProcessing {
     public ObjectProcessing(GrouperConfiguration configuration) {
 
         this.configuration = configuration;
+
+        TABLE_MEMBERSHIP_NAME = configuration.getTablePrefix() + NO_PREFIX_TABLE_MEMBERSHIP_NAME;
     }
 
     public abstract void buildObjectClass(SchemaBuilder schemaBuilder, GrouperConfiguration configuration);

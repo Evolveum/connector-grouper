@@ -33,7 +33,7 @@ public class Misc extends CommonTestClass {
     public void inHighVolume() {
         GrouperConnection grouperConnection = new GrouperConnection(grouperConfiguration);
 
-        String query = "SELECT * FROM public.gr_mp_subjects WHERE subject_id_index IN(";
+        String query = "SELECT * FROM " + grouperConfiguration.getSchema() + "." + grouperConfiguration.getTablePrefix() + "_mp_subjects WHERE subject_id_index IN(";
         for (int i = 0; MAX_IN >= i; i++) {
 
             query = query + i;

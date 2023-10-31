@@ -44,8 +44,9 @@ public class GrouperConnection {
         Connection connection;
         dataSource.setPortNumbers(new int[]{Integer.parseInt(configuration.getPort())});
         dataSource.setUser(configuration.getUserName());
-        dataSource.setServerName(configuration.getHost());
+        dataSource.setServerNames(new String[]{configuration.getHost()});
         dataSource.setDatabaseName(configuration.getDatabaseName());
+        dataSource.setCurrentSchema(configuration.getSchema());
 
         GuardedString clientPassword = configuration.getPassword();
         GuardedStringAccessor accessorSecret = new GuardedStringAccessor();
