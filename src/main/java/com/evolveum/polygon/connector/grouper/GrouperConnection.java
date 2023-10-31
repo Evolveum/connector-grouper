@@ -42,7 +42,7 @@ public class GrouperConnection {
     private static Connection initialize(GrouperConfiguration configuration) {
         final PGConnectionPoolDataSource dataSource = new PGConnectionPoolDataSource();
         Connection connection;
-        dataSource.setPortNumbers(new int[Integer.parseInt(configuration.getPort())]);
+        dataSource.setPortNumbers(new int[]{Integer.parseInt(configuration.getPort())});
         dataSource.setUser(configuration.getUserName());
         dataSource.setServerName(configuration.getHost());
         dataSource.setDatabaseName(configuration.getDatabaseName());
