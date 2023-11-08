@@ -45,6 +45,7 @@ public class PropertiesParser {
     private static final String _EXCLUDE_DELETED = "excludeDeletedObjects";
     private static final String _MAX_PAGE_SIZE = "maxPageSize";
     private static final String _ATTRS_ALL_SEARCH = "attrsToHaveInAllSearch";
+    private static final String _TABLE_PREFIX = "tablePrefix";
 
 
     public PropertiesParser() {
@@ -78,6 +79,10 @@ public class PropertiesParser {
 
     public String getDatabase() {
         return (String) PROPERTIES.get(_DATABASE);
+    }
+    //TODO
+    public String getTablePrefix() {
+        return (String) PROPERTIES.get(_TABLE_PREFIX);
     }
 
     public Set<String> getSubjectProperties() {

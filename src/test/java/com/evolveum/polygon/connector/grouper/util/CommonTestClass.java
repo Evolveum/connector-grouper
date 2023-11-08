@@ -47,7 +47,8 @@ public class CommonTestClass implements ObjectConstants {
         grouperConfiguration.setPassword(parser.getPassword());
         grouperConfiguration.setUserName(parser.getLogin());
         grouperConfiguration.setEnableIdBasedPaging(parser.getEnableIdBasedPaging());
-
+        //TODO
+        grouperConfiguration.setTablePrefix(parser.getTablePrefix());
         grouperConfiguration.setExcludeDeletedObjects(parser.getExcludeDeletedObjects());
 
         if (parser.getValidTimeout() != null) {
@@ -130,27 +131,6 @@ public class CommonTestClass implements ObjectConstants {
 
             operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, subjectArray.toArray(new String[0]));
         }
-//        } else {
-//
-//            if (extendedAttrsToGet) {
-//
-//                subjectArray.add(ATTR_MEMBER_OF);
-//                groupArray.add(ATTR_MEMBERS);
-//
-//                if (grouperConfiguration.getExtendedSubjectProperties() != null) {
-//
-//                    subjectArray.addAll(Arrays.asList(grouperConfiguration.getExtendedSubjectProperties()));
-//                }
-//
-//                if (grouperConfiguration.getExtendedGroupProperties() != null) {
-//
-//                    groupArray.addAll(Arrays.asList(grouperConfiguration.getExtendedGroupProperties()));
-//                }
-//            }
-//            subjectArray.addAll(groupArray);
-//
-//            operationOptions.put(OperationOptions.OP_ATTRIBUTES_TO_GET, subjectArray.toArray(new String[0]));
-//        }
 
         if (pageOffset != null) {
 
