@@ -32,14 +32,16 @@ public class SubjectProcessing extends ObjectProcessing {
     private static final Log LOG = Log.getLog(SubjectProcessing.class);
     private static final String ATTR_ID = "subject_id";
     private static final String ATTR_ID_IDX = "subject_id_index";
-    protected static final String TABLE_SU_NAME = "gr_mp_subjects";
-    private static final String TABLE_SU_EXTENSION_NAME = "gr_mp_subject_attributes";
+    protected static final String NO_PREFIX_TABLE_SU_NAME = "_mp_subjects";
+    private static final String NO_PREFIX_TABLE_SU_EXTENSION_NAME = "_mp_subject_attributes";
     public static final ObjectClass O_CLASS = new ObjectClass(SUBJECT_NAME);
     protected static final String ATTR_UID = ATTR_ID_IDX;
     protected static final String ATTR_NAME = ATTR_ID;
     protected static final String ATTR_MEMBER_OF = "member_of";
     protected static final String ATTR_MEMBER_OF_NATIVE = ATTR_GR_ID_IDX;
 
+    protected static String TABLE_SU_NAME = null;
+    private static String TABLE_SU_EXTENSION_NAME = null;
     protected Set<String> multiValuedAttributesCatalogue = new HashSet();
     protected Map<String, Class> columns = new HashMap<>();
     protected Map<String, Class> suMembershipColumns = Map.ofEntries(
@@ -61,6 +63,9 @@ public class SubjectProcessing extends ObjectProcessing {
     public SubjectProcessing(GrouperConfiguration configuration) {
 
         super(configuration);
+
+        TABLE_SU_NAME = configuration.getTablePrefix() + NO_PREFIX_TABLE_SU_NAME;
+        TABLE_SU_EXTENSION_NAME = configuration.getTablePrefix() + NO_PREFIX_TABLE_SU_EXTENSION_NAME;
 
         columns.put(ATTR_ID_IDX, Long.class);
         columns.put(ATTR_ID, String.class);

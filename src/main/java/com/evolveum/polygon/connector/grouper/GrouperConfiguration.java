@@ -33,8 +33,10 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private String databaseName;
     private GuardedString password;
     private String userName;
-    private String port;
+    private String port = "5432";
     private String host;
+    private String schema = "public";
+    private String tablePrefix = "gp";
     private String[] extendedGroupProperties = {};
     private String[] extendedSubjectProperties = {};
     private String[] attrsToHaveInAllSearch = {};
@@ -53,11 +55,6 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         if (host != null && !host.isEmpty()) {
         } else {
             parameters.add("host");
-        }
-
-        if (port != null && !port.isEmpty()) {
-        } else {
-            parameters.add("port");
         }
 
         if (databaseName != null && !databaseName.isEmpty()) {
@@ -161,8 +158,31 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.databaseName = databaseName;
     }
 
-
     @ConfigurationProperty(order = 7,
+            displayMessageKey = "schema.display",
+            helpMessageKey = "schema.help",
+            required = true)
+    public String getSchema() {
+        return schema;
+    }
+
+    public void setSchema(String schema) {
+        this.schema = schema;
+    }
+
+    @ConfigurationProperty(order = 8,
+            displayMessageKey = "tablePrefix.display",
+            helpMessageKey = "tablePrefix.help",
+            required = true)
+    public String getTablePrefix() {
+        return tablePrefix;
+    }
+
+    public void setTablePrefix(String tablePrefix) {
+        this.tablePrefix = tablePrefix;
+    }
+
+    @ConfigurationProperty(order = 9,
             displayMessageKey = "connectionValidTimeout.display",
             helpMessageKey = "connectionValidTimeout.help")
     public Integer getConnectionValidTimeout() {
@@ -173,7 +193,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.connectionValidTimeout = connectionValidTimeout;
     }
 
-    @ConfigurationProperty(order = 8, displayMessageKey = "extendedGroupProperties.display",
+    @ConfigurationProperty(order = 10, displayMessageKey = "extendedGroupProperties.display",
             helpMessageKey = "extendedGroupProperties.help")
 
     public String[] getExtendedGroupProperties() {
@@ -184,7 +204,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.extendedGroupProperties = extendedGroupProperties;
     }
 
-    @ConfigurationProperty(order = 9, displayMessageKey = "extendedSubjectProperties.display",
+    @ConfigurationProperty(order = 11, displayMessageKey = "extendedSubjectProperties.display",
             helpMessageKey = "extendedSubjectProperties.help")
 
     public String[] getExtendedSubjectProperties() {
@@ -195,7 +215,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.extendedSubjectProperties = extendedSubjectProperties;
     }
 
-    @ConfigurationProperty(order = 10, displayMessageKey = "excludeDeletedObjects.display",
+    @ConfigurationProperty(order = 12, displayMessageKey = "excludeDeletedObjects.display",
             helpMessageKey = "excludeDeletedObjects.help")
 
     public Boolean getExcludeDeletedObjects() {
@@ -206,7 +226,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.excludeDeletedObjects = excludeDeletedObjects;
     }
 
-    @ConfigurationProperty(order = 11, displayMessageKey = "enableIdBasedPaging.display",
+    @ConfigurationProperty(order = 13, displayMessageKey = "enableIdBasedPaging.display",
             helpMessageKey = "enableIdBasedPaging.help")
 
     public Boolean getEnableIdBasedPaging() {
@@ -217,7 +237,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.enableIdBasedPaging = enableIdBasedPaging;
     }
 
-    @ConfigurationProperty(order = 12, displayMessageKey = "maxPageSize.display",
+    @ConfigurationProperty(order = 14, displayMessageKey = "maxPageSize.display",
             helpMessageKey = "maxPageSize.help")
 
     public Integer getMaxPageSize() {
@@ -228,7 +248,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         this.maxPageSize = maxPageSize;
     }
 
-    @ConfigurationProperty(order = 13, displayMessageKey = "attrsToHaveInAllSearch.display",
+    @ConfigurationProperty(order = 15, displayMessageKey = "attrsToHaveInAllSearch.display",
             helpMessageKey = "attrsToHaveInAllSearch.help")
 
     public String[] getAttrsToHaveInAllSearch() {
@@ -248,6 +268,8 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
         userName = null;
         port = null;
         host = null;
+        schema = null;
+        tablePrefix = null;
         extendedSubjectProperties = null;
         extendedGroupProperties = null;
         excludeDeletedObjects = true;
