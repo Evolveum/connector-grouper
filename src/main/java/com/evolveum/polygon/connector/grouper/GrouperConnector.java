@@ -19,6 +19,7 @@ package com.evolveum.polygon.connector.grouper;
 import com.evolveum.polygon.connector.grouper.util.*;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectionFailedException;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
 import org.identityconnectors.framework.common.objects.*;
@@ -27,6 +28,7 @@ import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
 import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.Connector;
 import org.identityconnectors.framework.spi.ConnectorClass;
+import org.identityconnectors.framework.spi.PoolableConnector;
 import org.identityconnectors.framework.spi.operations.*;
 
 import java.sql.SQLException;
@@ -46,7 +48,7 @@ import java.util.*;
  * @since 1.0
  */
 @ConnectorClass(displayNameKey = "grouper.connector.display", configurationClass = GrouperConfiguration.class)
-public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp,
+public class GrouperConnector implements PoolableConnector, SchemaOp, TestOp, SearchOp<Filter>, DiscoverConfigurationOp,
         SyncOp {
 
     /**
@@ -81,6 +83,7 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
     @Override
     public void init(Configuration configuration) {
 
+        LOG.ok("Initialization of Grouper connector");
         this.configuration = (GrouperConfiguration) configuration;
         this.grouperConnection = new GrouperConnection(this.configuration);
 
@@ -154,8 +157,6 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         if (objectClass.is(ObjectProcessing.SUBJECT_NAME)) {
             SubjectProcessing subjectProcessing = new SubjectProcessing(configuration);
 
-            LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
-
             subjectProcessing.executeQuery(filter, resultsHandler, operationOptions, grouperConnection.getConnection());
 
         }
@@ -164,7 +165,6 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
         if (objectClass.is(ObjectProcessing.GROUP_NAME)) {
             GroupProcessing groupProcessing = new GroupProcessing(configuration);
 
-            LOG.ok("The object class for which the filter will be executed: {0}", objectClass.getDisplayNameKey());
 
             groupProcessing.executeQuery(filter, resultsHandler, operationOptions, grouperConnection.getConnection());
 
@@ -547,6 +547,25 @@ public class GrouperConnector implements Connector, SchemaOp, TestOp, SearchOp<F
             throw new UnsupportedOperationException("Attribute of type" + objectClass + "is not supported. " +
                     "Only " + GroupProcessing.GROUP_NAME + " and " + ObjectProcessing.SUBJECT_NAME + " objectclass " +
                     "is supported for SyncOp currently.");
+        }
+    }
+
+    @Override
+    public void checkAlive() {
+
+        try {
+            if (grouperConnection !=null && !grouperConnection.getConnection().isClosed()){
+                return;
+            } else if (grouperConnection.getConnection().isClosed()) {
+
+                throw new ConnectionFailedException("Database connection has been closed");
+            } else {
+
+                throw new ConnectionFailedException("Instance of grouper connection does not exist");
+            }
+        } catch (SQLException e) {
+
+            throw new ConnectionFailedException("An exception occurred during check-alive. ",e);
         }
     }
 }

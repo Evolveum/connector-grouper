@@ -42,10 +42,13 @@ public class GrouperConnection {
     private static Connection initialize(GrouperConfiguration configuration) {
         final PGConnectionPoolDataSource dataSource = new PGConnectionPoolDataSource();
         Connection connection;
-        dataSource.setPortNumbers(new int[]{Integer.parseInt(configuration.getPort())});
+        String host = configuration.getHost();
+        String databaseName = configuration.getDatabaseName();
+        String port = configuration.getPort();
+        dataSource.setPortNumbers(new int[]{Integer.parseInt(port)});
         dataSource.setUser(configuration.getUserName());
-        dataSource.setServerNames(new String[]{configuration.getHost()});
-        dataSource.setDatabaseName(configuration.getDatabaseName());
+        dataSource.setServerNames(new String[]{host});
+        dataSource.setDatabaseName(databaseName);
         dataSource.setCurrentSchema(configuration.getSchema());
 
         GuardedString clientPassword = configuration.getPassword();
@@ -56,8 +59,10 @@ public class GrouperConnection {
 
 
         try {
+            LOG.ok("About to acquire connection to the server on host:{0} and port:{1}, with the database name: {2}",host ,port ,databaseName);
             connection = dataSource.getConnection();
 
+            LOG.ok("Connection acquired");
         } catch (SQLException e) {
 
             throw new ConnectionFailedException("Database connection could not be established by the connector: "

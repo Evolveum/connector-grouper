@@ -88,8 +88,6 @@ public abstract class ObjectProcessing {
                                                Map<String, String> renameSet)
             throws SQLException {
 
-        LOG.info("Evaluation of SQL objects present in result set.");
-
         GrouperObject grouperObject;
         String extAttrName = null;
         String etxAttrValue = null;
@@ -109,8 +107,6 @@ public abstract class ObjectProcessing {
         ResultSetMetaData meta = resultSet.getMetaData();
 
         int count = meta.getColumnCount();
-        LOG.ok("Number of columns returned from result set object: {0}", count);
-        // options
 
         for (int i = 1; i <= count; i++) {
             String name = meta.getColumnName(i);
@@ -125,20 +121,16 @@ public abstract class ObjectProcessing {
 
             }
 
-            LOG.ok("Evaluation of column with name {0}", name);
-
             if (uid_name != null && name.equals(uid_name)) {
 
                 if (tableName != null && getMainTableName().equals(tableName)) {
                     String uidVal = Long.toString(resultSet.getLong(i));
-                    LOG.ok("Addition of UID attribute {0}, the value {1}", uid_name, uidVal);
 
                     grouperObject.setIdentifier(uidVal);
 
                 } else if (tableName == null) {
 
                     String uidVal = Long.toString(resultSet.getLong(i));
-                    LOG.ok("Addition of UID attribute {0}, the value {1}", uid_name, uidVal);
 
                     grouperObject.setIdentifier(uidVal);
 
@@ -148,14 +140,12 @@ public abstract class ObjectProcessing {
 
                 if (tableName != null && getMainTableName().equals(tableName)) {
                     String nameVal = resultSet.getString(i);
-                    LOG.ok("Addition of Name attribute {0}, the value {1}", name_name, nameVal);
 
                     grouperObject.setName(nameVal);
 
                 } else if (tableName == null) {
 
                     String nameVal = resultSet.getString(i);
-                    LOG.ok("Addition of Name attribute {0}, the value {1}", name_name, nameVal);
 
                     grouperObject.setName(nameVal);
 
@@ -163,12 +153,11 @@ public abstract class ObjectProcessing {
             } else if (ATTR_EXT_NAME.equals(name)) {
 
                 extAttrName = resultSet.getString(i);
-                LOG.ok("Addition of Name attribute {0}", extAttrName);
 
             } else if (ATTR_EXT_VALUE.equals(name)) {
 
                 etxAttrValue = resultSet.getString(i);
-                LOG.ok("Addition of extension value attribute, the value {0}", etxAttrValue);
+
             } else if (ATTR_DELETED.equals(name)) {
 
                 String deleted = resultSet.getString(i);
@@ -178,7 +167,6 @@ public abstract class ObjectProcessing {
                     if (deleted != null && ATTR_DELETED_TRUE.equals(deleted)) {
 
                         grouperObject.setDeleted(true);
-                        LOG.info("Object vas set to deleted");
                     }
 
                 } else if (getMembershipTableName().equals(tableName)) {
@@ -187,8 +175,6 @@ public abstract class ObjectProcessing {
 
                         saturateMembership = false;
 
-                        LOG.info("Object" + name_name != null ? " " + name_name + " membership row was marked as" +
-                                " deleted" : "membership column was marked as deleted");
                     }
 
                 } else if (getExtensionAttributeTableName().equals(tableName)) {
@@ -197,8 +183,6 @@ public abstract class ObjectProcessing {
 
                         saturateExtensionAttribute = false;
 
-                        LOG.info("Object" + name_name != null ? " " + name_name + " extension attribute row was " +
-                                "marked as deleted" : "membership column was marked as deleted");
                     }
 
                 }
@@ -212,7 +196,6 @@ public abstract class ObjectProcessing {
                     grouperObject.setLatestTimestamp(timestamp_latest);
                 }
 
-                LOG.info("Object" + name_name != null ? " " + name_name + " vas set to deleted" : "vas set to deleted");
             } else {
 
                 if (columns.containsKey(name)) {
@@ -225,8 +208,6 @@ public abstract class ObjectProcessing {
                     }
 
                     if (type.equals(Long.class)) {
-
-                        LOG.ok("Addition of Long type attribute for attribute from column with name {0}", origName);
 
                         Long resVal = resultSet.getLong(i);
 
@@ -250,16 +231,12 @@ public abstract class ObjectProcessing {
 
                     if (type.equals(String.class)) {
 
-                        LOG.ok("Addition of String type attribute for attribute from column with name {0}", name);
-
                         grouperObject.addAttribute(name, resultSet.getString(i),
                                 multiValuedAttributesCatalogue);
                     }
 
                 } else {
 
-                    LOG.info("SQL object handling discovered a column which is not present in the " +
-                            "original schema set. The column name: {0}", name);
                 }
             }
         }
@@ -354,7 +331,7 @@ public abstract class ObjectProcessing {
         if (grouperObject.isDeleted()) {
 
             builder.setDeltaType(SyncDeltaType.DELETE);
-            LOG.ok("{0} is deleted", objID);
+
             builder.setUid(new Uid(objID));
             builder.setToken(new SyncToken(grouperObject.getLatestTimestamp()));
 

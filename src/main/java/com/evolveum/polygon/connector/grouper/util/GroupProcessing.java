@@ -133,9 +133,6 @@ public class GroupProcessing extends ObjectProcessing {
     public void executeQuery(Filter filter, ResultsHandler handler, OperationOptions operationOptions
             , Connection connection) {
 
-        LOG.ok("Processing through executeQuery methods for the object class {0}",
-                O_CLASS);
-
         QueryBuilder queryBuilder;
         Boolean isEqualsUid = false;
         Boolean isAllQuery = !(filter != null);
@@ -318,10 +315,6 @@ public class GroupProcessing extends ObjectProcessing {
                 Integer processed = 0;
                 for (String objectName : objects.keySet()) {
 
-                    LOG.info("The object name: {0}", objectName);
-
-                    LOG.info("The object: {0}", objects.get(objectName).toString());
-
                     GrouperObject go = objects.get(objectName);
 
                     ConnectorObjectBuilder co = buildConnectorObject(O_CLASS, go, operationOptions);
@@ -331,7 +324,6 @@ public class GroupProcessing extends ObjectProcessing {
 
                         if (handler instanceof SearchResultsHandler) {
 
-                            LOG.ok("Handling results with pseudoCookie: {0}", pseudoCookie);
                             LOG.ok("Remaining page results: {0}", sizeS - processed);
 
                             SearchResult searchResult = new SearchResult(pseudoCookie,
@@ -345,9 +337,6 @@ public class GroupProcessing extends ObjectProcessing {
                     processed++;
                 }
                 if (handler instanceof SearchResultsHandler) {
-
-                    LOG.ok("Handling results with pseudoCookie: {0}", pseudoCookie);
-                    LOG.ok("Remaining page results: {0}", sizeS - processed);
 
                     SearchResult searchResult = new SearchResult(pseudoCookie, -1);
                     ((SearchResultsHandler) handler).handleResult(searchResult);
@@ -696,7 +685,7 @@ public class GroupProcessing extends ObjectProcessing {
 
                 for (int i = 1; i <= count; i++) {
                     String name = meta.getColumnName(i);
-                    LOG.ok("Evaluation of column with name {0}", name);
+
                     Long resVal = result.getLong(i);
 
                     Long val = result.wasNull() ? null : resVal;

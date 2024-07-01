@@ -567,7 +567,9 @@ public class SubjectProcessing extends ObjectProcessing {
 
                 for (int i = 1; i <= count; i++) {
                     String name = meta.getColumnName(i);
-                    LOG.ok("Evaluation of column with name {0}", name);
+
+                    //TODO Causing Log pollution in trace
+                    //LOG.ok("Evaluation of column with name {0}", name);
                     Long resVal = result.getLong(i);
 
                     Long val = result.wasNull() ? null : resVal;
