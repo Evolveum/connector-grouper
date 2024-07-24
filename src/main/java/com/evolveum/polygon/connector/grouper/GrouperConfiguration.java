@@ -36,7 +36,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private String port = "5432";
     private String host;
     private String schema = "public";
-    private String tablePrefix = "gp";
+    private String tablePrefix = "gr";
     private String[] extendedGroupProperties = {};
     private String[] extendedSubjectProperties = {};
     private String[] attrsToHaveInAllSearch = {};
