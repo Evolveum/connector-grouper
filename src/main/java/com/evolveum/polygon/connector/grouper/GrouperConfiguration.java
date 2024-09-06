@@ -33,7 +33,7 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
     private String databaseName;
     private GuardedString password;
     private String userName;
-    private String port = "5432";
+    private String port;
     private String host;
     private String schema = "public";
     private String tablePrefix = "gr";
@@ -111,7 +111,8 @@ public class GrouperConfiguration extends AbstractConfiguration implements State
 
     @ConfigurationProperty(order = 3,
             displayMessageKey = "port.display",
-            helpMessageKey = "port.help", required = true)
+            helpMessageKey = "port.help",
+            required = true)
     public String getPort() {
         return this.port;
     }
